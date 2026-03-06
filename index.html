@@ -801,13 +801,6 @@
                     </svg>
                     JSONファイルをダウンロード
                 </a>
-                <div class="border-t border-gray-200 pt-4">
-                    <p class="text-sm font-medium text-gray-700 mb-2">QRコードで出力</p>
-                    <p class="text-xs text-gray-500 mb-2">スマホで読み取るとデータを取り込めます（データ量が多いとQRコードに収まらない場合があります）</p>
-                    <div id="export-qr-container" class="inline-block p-2 bg-white rounded border border-gray-200 mb-2"></div>
-                    <p id="export-qr-too-long" class="text-sm text-amber-600 hidden mb-2">データが長いためQRコードにできません。JSONでダウンロードしてください。</p>
-                    <a id="export-qr-download" href="#" download="読書記録-QR.png" class="hidden inline-flex items-center px-4 py-2 border border-gray-600 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">QRコード画像をダウンロード</a>
-                </div>
             </div>
         </div>
     </div>
@@ -2495,9 +2488,6 @@ if (imageData) {
                 
                 // モーダルを表示
                 showModal('export-modal');
-                
-                // QRコードを生成して表示
-                updateExportModalQR(data, ownerName);
                 
                 // トースト通知
                 showToast('エクスポートの準備ができました。リンクをクリックしてダウンロードしてください。', 'success');
