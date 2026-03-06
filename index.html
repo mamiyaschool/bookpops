@@ -2391,26 +2391,57 @@ if (imageData) {
             var url = URL.createObjectURL(file);
             img.onload = function() {
                 URL.revokeObjectURL(url);
+                var w = img.naturalWidth || img.width;
+                var h = img.naturalHeight || img.height;
+                var maxSize = 1200;
+                var scale = 1;
+                if (w > maxSize || h > maxSize) {
+                    scale = w > h ? maxSize / w : maxSize / h;
+                    w = Math.round(w * scale);
+                    h = Math.round(h * scale);
+                }
                 var canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth || img.width;
-                canvas.height = img.naturalHeight || img.height;
+                canvas.width = w;
+                canvas.height = h;
                 var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                var code = typeof jsQR === 'function' ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' }) : null;
-                if (code && code.data) {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                var imageData = ctx.getImageData(0, 0, w, h);
+                function tryAddFromQRData(dataStr) {
+                    if (!dataStr) return false;
                     try {
-                        var parsed = JSON.parse(code.data);
+                        var parsed = JSON.parse(dataStr);
                         if (parsed.type === 'introduction-card' && parsed.book) {
                             addBookFromIntroductionCard(parsed);
-                        } else {
-                            showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                            return true;
                         }
-                    } catch (err) {
-                        showToast('QRコードの内容を読み取れませんでした。紹介カードのQR画像を選んでください。', 'error');
-                    }
+                    } catch (err) {}
+                    return false;
+                }
+                var dataStr = null;
+                var jsQRFn = (function() { try { return (typeof jsQR !== 'undefined' ? jsQR : (typeof window !== 'undefined' ? window.jsQR : null)); } catch (e) { return null; } })();
+                if (jsQRFn) {
+                    var code = jsQRFn(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
+                    if (code && code.data) dataStr = code.data;
+                }
+                if (!dataStr && typeof BarcodeDetector !== 'undefined') {
+                    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                    detector.detect(canvas).then(function(barcodes) {
+                        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                            if (tryAddFromQRData(barcodes[0].rawValue)) return;
+                        }
+                        showToast('QRコードが検出されませんでした。紹介カードの「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
+                    }).catch(function() {
+                        showToast('QRコードが検出されませんでした。紹介カードの「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
+                    });
+                    return;
+                }
+                if (tryAddFromQRData(dataStr)) return;
+                if (dataStr) {
+                    showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                } else if (!jsQRFn) {
+                    showToast('QR読み取り機能を利用できません。ブラウザを更新するか、JSONでインポートしてください。', 'error');
                 } else {
-                    showToast('QRコードが検出されませんでした。画像を選び直すか、QRがはっきり映っているか確認してください。', 'error');
+                    showToast('QRコードが検出されませんでした。紹介カードの「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
                 }
             };
             img.onerror = function() {
