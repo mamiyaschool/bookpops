@@ -426,7 +426,7 @@
                     QRで紹介カードを追加
                 </button>
                 <input type="file" id="import-file" accept=".json" class="hidden">
-                <input type="file" id="import-qr-file" accept="image/*" class="hidden">
+                <input type="file" id="import-qr-file" accept="image/*" capture="environment" class="hidden">
                 <div id="qr-reader" class="hidden" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
                 </div>
             </div>
@@ -2408,11 +2408,20 @@ if (imageData) {
                     document.body.appendChild(readerEl);
                 }
                 var html5Scanner = new Html5QrcodeClass('qr-reader');
-                html5Scanner.scanFile(file, false).then(function(decodedText) {
+                var scanPromise = (typeof html5Scanner.scanFileV2 === 'function')
+                    ? html5Scanner.scanFileV2(file, false).then(function(result) {
+                        return result && result.decodedText ? result.decodedText : '';
+                    })
+                    : html5Scanner.scanFile(file, false);
+                scanPromise.then(function(decodedText) {
                     if (tryAddFromQRData(decodedText)) return;
                     showToast('このQRコードは紹介カードのデータではありません。', 'error');
                 }).catch(function() {
                     decodeQRWithCanvas(file);
+                }).finally(function() {
+                    if (typeof html5Scanner.clear === 'function') {
+                        html5Scanner.clear().catch(function() {});
+                    }
                 });
                 return;
             }
@@ -2436,23 +2445,53 @@ if (imageData) {
                 canvas.height = h;
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
-                var imageData = ctx.getImageData(0, 0, w, h);
-                var dataStr = null;
                 var jsQRFn = (typeof jsQR !== 'undefined' ? jsQR : (typeof window !== 'undefined' ? window.jsQR : null));
-                if (jsQRFn) {
-                    var code = jsQRFn(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
-                    if (code && code.data) dataStr = code.data;
+                function makeRotatedCanvas(srcCanvas, angle) {
+                    if (angle === 0) return srcCanvas;
+                    var out = document.createElement('canvas');
+                    if (angle === 90 || angle === 270) {
+                        out.width = srcCanvas.height;
+                        out.height = srcCanvas.width;
+                    } else {
+                        out.width = srcCanvas.width;
+                        out.height = srcCanvas.height;
+                    }
+                    var octx = out.getContext('2d');
+                    octx.translate(out.width / 2, out.height / 2);
+                    octx.rotate(angle * Math.PI / 180);
+                    octx.drawImage(srcCanvas, -srcCanvas.width / 2, -srcCanvas.height / 2);
+                    return out;
                 }
-                if (!dataStr && typeof BarcodeDetector !== 'undefined') {
+                var attempts = [0, 90, 180, 270];
+                var decoded = null;
+                if (jsQRFn) {
+                    for (var i = 0; i < attempts.length && !decoded; i++) {
+                        var c = makeRotatedCanvas(canvas, attempts[i]);
+                        var id = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+                        var result = jsQRFn(id.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+                        if (result && result.data) decoded = result.data;
+                    }
+                }
+                if (tryAddFromQRData(decoded)) return;
+                if (!decoded && typeof BarcodeDetector !== 'undefined') {
                     var detector = new BarcodeDetector({ formats: ['qr_code'] });
-                    detector.detect(canvas).then(function(barcodes) {
-                        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue && tryAddFromQRData(barcodes[0].rawValue)) return;
-                        showQRScanError();
-                    }).catch(showQRScanError);
+                    var detectNext = function(index) {
+                        if (index >= attempts.length) {
+                            showQRScanError();
+                            return;
+                        }
+                        var c = makeRotatedCanvas(canvas, attempts[index]);
+                        detector.detect(c).then(function(barcodes) {
+                            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue && tryAddFromQRData(barcodes[0].rawValue)) return;
+                            detectNext(index + 1);
+                        }).catch(function() {
+                            detectNext(index + 1);
+                        });
+                    };
+                    detectNext(0);
                     return;
                 }
-                if (tryAddFromQRData(dataStr)) return;
-                if (dataStr) showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                if (decoded) showToast('このQRコードは紹介カードのデータではありません。', 'error');
                 else if (!jsQRFn) showToast('QR読み取り機能を利用できません。ブラウザを更新するか、JSONでインポートしてください。', 'error');
                 else showQRScanError();
             };
