@@ -2749,6 +2749,36 @@ if (imageData) {
             return cardQrCanvasEl;
         }
 
+        function rotateCardQrCanvas(srcCanvas, angle) {
+            if (angle === 0) return srcCanvas;
+            var out = document.createElement('canvas');
+            if (angle === 90 || angle === 270) {
+                out.width = srcCanvas.height;
+                out.height = srcCanvas.width;
+            } else {
+                out.width = srcCanvas.width;
+                out.height = srcCanvas.height;
+            }
+            var octx = out.getContext('2d');
+            octx.translate(out.width / 2, out.height / 2);
+            octx.rotate(angle * Math.PI / 180);
+            octx.drawImage(srcCanvas, -srcCanvas.width / 2, -srcCanvas.height / 2);
+            return out;
+        }
+
+        function decodeCardQrByJsQR(baseCanvas) {
+            var jsQRFn = (typeof jsQR !== 'undefined' ? jsQR : (typeof window !== 'undefined' ? window.jsQR : null));
+            if (!jsQRFn || !baseCanvas) return null;
+            var attempts = [0, 90, 180, 270];
+            for (var i = 0; i < attempts.length; i++) {
+                var c = rotateCardQrCanvas(baseCanvas, attempts[i]);
+                var id = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+                var result = jsQRFn(id.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+                if (result && result.data) return result.data;
+            }
+            return null;
+        }
+
         function scheduleCardQrAutoScan() {
             cardQrScanTimer = setTimeout(runCardQrAutoScanOnce, 650);
         }
@@ -2762,25 +2792,36 @@ if (imageData) {
                 scheduleCardQrAutoScan();
                 return;
             }
-            if (typeof BarcodeDetector === 'undefined') {
-                setCardQrStatus('自動認識はこのブラウザで未対応です。「画像から読み取る」をご利用ください。', true);
-                return;
-            }
             cardQrScanBusy = true;
-            if (!cardQrDetector) cardQrDetector = new BarcodeDetector({ formats: ['qr_code'] });
             var cap = captureCardQrFrame();
             if (!cap) {
                 cardQrScanBusy = false;
                 scheduleCardQrAutoScan();
                 return;
             }
-            cardQrDetector.detect(cap).then(function(codes) {
-                if (codes && codes.length > 0) {
-                    for (var i = 0; i < codes.length; i++) {
-                        if (tryAddFromQRData(codes[i].rawValue || '')) return;
+            var detectPromise;
+            if (typeof BarcodeDetector !== 'undefined') {
+                if (!cardQrDetector) cardQrDetector = new BarcodeDetector({ formats: ['qr_code'] });
+                detectPromise = cardQrDetector.detect(cap).then(function(codes) {
+                    if (codes && codes.length > 0) {
+                        for (var i = 0; i < codes.length; i++) {
+                            var raw = codes[i].rawValue || '';
+                            if (raw) return raw;
+                        }
                     }
+                    return null;
+                }).catch(function() { return null; });
+            } else {
+                detectPromise = Promise.resolve(null);
+            }
+            detectPromise.then(function(rawValue) {
+                var qrText = rawValue || decodeCardQrByJsQR(cap);
+                if (tryAddFromQRData(qrText)) return;
+                if (!rawValue && !qrText && typeof BarcodeDetector === 'undefined' && !((typeof jsQR !== 'undefined') || (typeof window !== 'undefined' && window.jsQR))) {
+                    setCardQrStatus('このブラウザでは自動認識を利用できません。「画像から読み取る」をご利用ください。', true);
+                } else {
+                    setCardQrStatus('自動認識中...（ガイド枠内にQRを合わせてください）');
                 }
-                setCardQrStatus('自動認識中...（ガイド枠内にQRを合わせてください）');
             }).catch(function() {
                 setCardQrStatus('認識中...（光の反射を避けてください）');
             }).finally(function() {
