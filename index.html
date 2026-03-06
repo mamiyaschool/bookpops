@@ -399,6 +399,57 @@
                 padding: 1rem;
             }
         }
+        #card-qr-scan-modal .modal-content {
+            max-width: 480px;
+        }
+        #card-qr-scan-viewport {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: #000;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+        #card-qr-scan-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #card-qr-scan-canvas {
+            display: none;
+        }
+        #card-qr-scan-guide {
+            position: absolute;
+            left: 14%;
+            top: 14%;
+            width: 72%;
+            height: 72%;
+            border: 2px solid rgba(255, 255, 255, 0.92);
+            border-radius: 12px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+            pointer-events: none;
+        }
+        #card-qr-scan-guide-label {
+            position: absolute;
+            left: 50%;
+            bottom: 8px;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 9999px;
+            padding: 0.2rem 0.6rem;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        @media (max-width: 640px) {
+            #card-qr-scan-modal .modal-content {
+                width: 96%;
+                padding: 1rem;
+            }
+        }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -816,6 +867,30 @@
                 <button type="button" id="isbn-scan-cancel-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                     キャンセル
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 紹介カードQRカメラ読み取りモーダル -->
+    <div id="card-qr-scan-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-medium text-gray-900">QRで紹介カードを追加</h3>
+                <button type="button" id="card-qr-scan-close" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">紹介カードのQRコードをガイド枠内に合わせると、自動で追加します。</p>
+            <div id="card-qr-scan-viewport" class="mb-3">
+                <video id="card-qr-scan-video" autoplay playsinline muted></video>
+                <div id="card-qr-scan-guide" aria-hidden="true"></div>
+                <div id="card-qr-scan-guide-label" aria-hidden="true">この枠にQRを合わせる</div>
+                <canvas id="card-qr-scan-canvas"></canvas>
+            </div>
+            <p id="card-qr-scan-status" class="text-sm text-gray-500 mb-3"></p>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="card-qr-scan-from-image-btn" class="inline-flex items-center px-4 py-2 border border-indigo-600 text-indigo-600 rounded-md shadow-sm text-sm font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">画像から読み取る</button>
+                <button type="button" id="card-qr-scan-cancel-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">閉じる</button>
             </div>
         </div>
     </div>
@@ -1747,6 +1822,9 @@
             const statusEl = document.getElementById('isbn-scan-status');
             let stream = null;
             let tesseractLoaded = false;
+            let autoScanTimer = null;
+            let autoScanBusy = false;
+            let detectorInstance = null;
 
             function setStatus(msg, isError) {
                 statusEl.textContent = msg || '';
@@ -1760,7 +1838,16 @@
                 }
             }
 
+            function stopAutoScan() {
+                if (autoScanTimer) {
+                    clearTimeout(autoScanTimer);
+                    autoScanTimer = null;
+                }
+                autoScanBusy = false;
+            }
+
             function closeIsbnScanModal() {
+                stopAutoScan();
                 stopCamera();
                 hideModal('isbn-scan-modal');
                 setStatus('');
@@ -1796,12 +1883,23 @@
                 return out;
             }
 
+            function extractIsbnFromRawText(rawValue) {
+                var raw = String(rawValue || '').toUpperCase();
+                var normalized = normalizeIsbn13(raw);
+                if (normalized) return normalized;
+                var digitsOnly = raw.replace(/\D/g, '');
+                var m13 = digitsOnly.match(/97[89]\d{10}/);
+                if (m13) return m13[0];
+                var m10 = raw.match(/\d{9}[\dX]/);
+                if (m10) return m10[0];
+                return null;
+            }
+
             function extractIsbnFromBarcodeResults(barcodes) {
                 if (!barcodes || barcodes.length === 0) return null;
                 for (var i = 0; i < barcodes.length; i++) {
-                    var raw = String(barcodes[i].rawValue || '').toUpperCase().replace(/[^0-9X]/g, '');
-                    if (/^97[89]\d{10}$/.test(raw)) return raw;
-                    if (/^\d{9}[\dX]$/.test(raw)) return raw;
+                    var candidate = extractIsbnFromRawText(barcodes[i].rawValue || '');
+                    if (candidate) return candidate;
                 }
                 return null;
             }
@@ -1838,7 +1936,7 @@
                         video.srcObject = s;
                         var track = s.getVideoTracks && s.getVideoTracks()[0];
                         tuneCameraFocus(track);
-                        setStatus('バーコードを本にかざすか、「文字を読み取る」で撮影した画面からISBNを認識します。');
+                        startAutoScan();
                     })
                     .catch(function(err) {
                         setStatus('カメラにアクセスできません: ' + (err.message || '許可が必要です'), true);
@@ -1874,11 +1972,70 @@
                 return canvas;
             }
 
+            function detectIsbnFromCrops(crops, withRotations) {
+                if (typeof BarcodeDetector === 'undefined') return Promise.resolve(null);
+                if (!detectorInstance) detectorInstance = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'qr_code'] });
+                var captures = crops.map(function(c) { return captureFrame({ crop: c }); }).filter(function(x) { return !!x; });
+                if (captures.length === 0) return Promise.resolve(null);
+                var tasks = [];
+                captures.forEach(function(cap) {
+                    tasks.push(detectorInstance.detect(cap).catch(function() { return []; }));
+                    if (withRotations) {
+                        tasks.push(detectorInstance.detect(rotateCanvas(cap, 90)).catch(function() { return []; }));
+                        tasks.push(detectorInstance.detect(rotateCanvas(cap, 270)).catch(function() { return []; }));
+                    }
+                });
+                return Promise.all(tasks).then(function(sets) {
+                    var merged = [];
+                    sets.forEach(function(s) { merged = merged.concat(s); });
+                    return extractIsbnFromBarcodeResults(merged);
+                }).catch(function() { return null; });
+            }
+
+            function scheduleAutoScan() {
+                autoScanTimer = setTimeout(runAutoScanOnce, 800);
+            }
+
+            function runAutoScanOnce() {
+                if (!stream || !video.videoWidth) {
+                    scheduleAutoScan();
+                    return;
+                }
+                if (autoScanBusy) {
+                    scheduleAutoScan();
+                    return;
+                }
+                autoScanBusy = true;
+                detectIsbnFromCrops(['isbn-band', 'full'], false)
+                    .then(function(isbn) {
+                        if (isbn) {
+                            applyIsbnAndClose(isbn);
+                            return;
+                        }
+                        setStatus('自動認識中...（枠内に横向きでISBNバーコード/QRを合わせてください）');
+                    })
+                    .finally(function() {
+                        autoScanBusy = false;
+                        if (stream) scheduleAutoScan();
+                    });
+            }
+
+            function startAutoScan() {
+                if (typeof BarcodeDetector === 'undefined') {
+                    setStatus('自動認識はこのブラウザで未対応です。「バーコードを読み取る」または「文字を読み取る（OCR）」をご利用ください。', true);
+                    return;
+                }
+                stopAutoScan();
+                setStatus('自動認識中...（枠内に横向きでISBNバーコード/QRを合わせてください）');
+                scheduleAutoScan();
+            }
+
             document.getElementById('isbn-scan-barcode-btn').addEventListener('click', function() {
                 if (typeof BarcodeDetector === 'undefined') {
                     setStatus('お使いのブラウザではバーコード読み取りに対応していません。ChromeまたはEdgeでお試しください。「文字を読み取る（OCR）」は利用できます。', true);
                     return;
                 }
+                stopAutoScan();
                 var capBand = captureFrame({ crop: 'isbn-band' });
                 var capFull = captureFrame({ crop: 'full' });
                 var captureList = [capBand, capFull].filter(function(x) { return !!x; });
@@ -1887,10 +2044,11 @@
                     return;
                 }
                 setStatus('読み取り中...（枠の中に横向きで合わせると精度が上がります）');
-                var detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a'] });
+                var detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'qr_code'] });
                 function tryDetectByIndex(index) {
                     if (index >= captureList.length) {
                         setStatus('バーコードが検出されませんでした。裏表紙のバーコードを枠に合わせ、距離を少し離して再度お試しください。', true);
+                        if (stream) startAutoScan();
                         return;
                     }
                     var base = captureList[index];
@@ -1911,10 +2069,12 @@
             });
 
             document.getElementById('isbn-scan-ocr-btn').addEventListener('click', function() {
+                stopAutoScan();
                 var capText = captureFrame({ crop: 'isbn-text' });
                 var capFull = captureFrame({ crop: 'full' });
                 if (!capText && !capFull) {
                     setStatus('映像を取得できません。少し待ってから再度お試しください。', true);
+                    if (stream) startAutoScan();
                     return;
                 }
                 setStatus('OCRで文字を認識しています...');
@@ -1949,10 +2109,14 @@
                             })
                             .then(function(isbn) {
                                 if (isbn) applyIsbnAndClose(isbn);
-                                else setStatus('画像からISBNが見つかりませんでした。ISBNの数字列を枠に横向きで合わせ、ピントが合ってから再度お試しください。', true);
+                                else {
+                                    setStatus('画像からISBNが見つかりませんでした。ISBNの数字列を枠に横向きで合わせ、ピントが合ってから再度お試しください。', true);
+                                    if (stream) startAutoScan();
+                                }
                             });
                     } else {
                         setStatus('OCRライブラリの読み込みに失敗しました。', true);
+                        if (stream) startAutoScan();
                     }
                 }
                 if (tesseractLoaded) {
@@ -2520,17 +2684,15 @@ if (imageData) {
             e.target.value = '';
         });
 
-        // QRで紹介カードを追加ボタン → 画像ファイル選択
-        document.getElementById('import-qr-btn').addEventListener('click', function() {
-            document.getElementById('import-qr-file').click();
-        });
-
-        // QRコード画像を読み取り、紹介カードとして追加
+        // QRコード文字列を読み取り、紹介カードとして追加
         function tryAddFromQRData(dataStr) {
             if (!dataStr) return false;
             try {
                 var parsed = JSON.parse(dataStr);
                 if (parsed.type === 'introduction-card' && parsed.book) {
+                    if (document.getElementById('card-qr-scan-modal').style.display === 'flex') {
+                        closeCardQrScanModal();
+                    }
                     addBookFromIntroductionCard(parsed);
                     return true;
                 }
@@ -2540,6 +2702,125 @@ if (imageData) {
         function showQRScanError() {
             showToast('QRコードが検出されませんでした。紹介カードの「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
         }
+
+        // 紹介カードQRのカメラ自動読み取り
+        var cardQrScanStream = null;
+        var cardQrScanTimer = null;
+        var cardQrScanBusy = false;
+        var cardQrDetector = null;
+        var cardQrVideoEl = document.getElementById('card-qr-scan-video');
+        var cardQrCanvasEl = document.getElementById('card-qr-scan-canvas');
+        var cardQrStatusEl = document.getElementById('card-qr-scan-status');
+
+        function setCardQrStatus(msg, isError) {
+            cardQrStatusEl.textContent = msg || '';
+            cardQrStatusEl.className = 'text-sm mb-3 ' + (isError ? 'text-amber-600' : 'text-gray-500');
+        }
+
+        function stopCardQrScan() {
+            if (cardQrScanTimer) {
+                clearTimeout(cardQrScanTimer);
+                cardQrScanTimer = null;
+            }
+            cardQrScanBusy = false;
+            if (cardQrScanStream) {
+                cardQrScanStream.getTracks().forEach(function(t) { t.stop(); });
+                cardQrScanStream = null;
+            }
+        }
+
+        function closeCardQrScanModal() {
+            stopCardQrScan();
+            hideModal('card-qr-scan-modal');
+            setCardQrStatus('');
+        }
+
+        function captureCardQrFrame() {
+            if (!cardQrScanStream || !cardQrVideoEl.videoWidth) return null;
+            var vw = cardQrVideoEl.videoWidth;
+            var vh = cardQrVideoEl.videoHeight;
+            var side = Math.floor(Math.min(vw, vh) * 0.72);
+            var sx = Math.floor((vw - side) / 2);
+            var sy = Math.floor((vh - side) / 2);
+            cardQrCanvasEl.width = side;
+            cardQrCanvasEl.height = side;
+            var ctx = cardQrCanvasEl.getContext('2d');
+            ctx.drawImage(cardQrVideoEl, sx, sy, side, side, 0, 0, side, side);
+            return cardQrCanvasEl;
+        }
+
+        function scheduleCardQrAutoScan() {
+            cardQrScanTimer = setTimeout(runCardQrAutoScanOnce, 650);
+        }
+
+        function runCardQrAutoScanOnce() {
+            if (!cardQrScanStream || !cardQrVideoEl.videoWidth) {
+                scheduleCardQrAutoScan();
+                return;
+            }
+            if (cardQrScanBusy) {
+                scheduleCardQrAutoScan();
+                return;
+            }
+            if (typeof BarcodeDetector === 'undefined') {
+                setCardQrStatus('自動認識はこのブラウザで未対応です。「画像から読み取る」をご利用ください。', true);
+                return;
+            }
+            cardQrScanBusy = true;
+            if (!cardQrDetector) cardQrDetector = new BarcodeDetector({ formats: ['qr_code'] });
+            var cap = captureCardQrFrame();
+            if (!cap) {
+                cardQrScanBusy = false;
+                scheduleCardQrAutoScan();
+                return;
+            }
+            cardQrDetector.detect(cap).then(function(codes) {
+                if (codes && codes.length > 0) {
+                    for (var i = 0; i < codes.length; i++) {
+                        if (tryAddFromQRData(codes[i].rawValue || '')) return;
+                    }
+                }
+                setCardQrStatus('自動認識中...（ガイド枠内にQRを合わせてください）');
+            }).catch(function() {
+                setCardQrStatus('認識中...（光の反射を避けてください）');
+            }).finally(function() {
+                cardQrScanBusy = false;
+                if (cardQrScanStream) scheduleCardQrAutoScan();
+            });
+        }
+
+        function openCardQrScanModal() {
+            showModal('card-qr-scan-modal');
+            setCardQrStatus('カメラを起動しています...');
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            }).then(function(s) {
+                cardQrScanStream = s;
+                cardQrVideoEl.srcObject = s;
+                setCardQrStatus('自動認識中...（ガイド枠内にQRを合わせてください）');
+                scheduleCardQrAutoScan();
+            }).catch(function(err) {
+                setCardQrStatus('カメラにアクセスできません: ' + (err.message || '許可が必要です'), true);
+            });
+        }
+
+        // QRで紹介カードを追加ボタン
+        document.getElementById('import-qr-btn').addEventListener('click', function() {
+            openCardQrScanModal();
+        });
+        document.getElementById('card-qr-scan-close').addEventListener('click', closeCardQrScanModal);
+        document.getElementById('card-qr-scan-cancel-btn').addEventListener('click', closeCardQrScanModal);
+        document.getElementById('card-qr-scan-from-image-btn').addEventListener('click', function() {
+            stopCardQrScan();
+            setCardQrStatus('画像から読み取り中...');
+            document.getElementById('import-qr-file').click();
+        });
+
+        // QRコード画像を読み取り、紹介カードとして追加
         document.getElementById('import-qr-file').addEventListener('change', function(e) {
             var file = e.target.files[0];
             e.target.value = '';
