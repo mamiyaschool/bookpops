@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>わたしの読書記録</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -419,7 +420,12 @@
                     </svg>
                     データをインポート
                 </button>
+                <button id="import-qr-btn" class="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center" title="QRコード画像を読み取って紹介カードを追加">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm3-6h1v1h-1v-1zm0 3h1v1h-1v-1zm0 3h1v1h-1v-1z"/></svg>
+                    QRで紹介カードを追加
+                </button>
                 <input type="file" id="import-file" accept=".json" class="hidden">
+                <input type="file" id="import-qr-file" accept="image/*" class="hidden">
                 </div>
             </div>
 
@@ -2368,6 +2374,50 @@ if (imageData) {
             if (file) {
                 importData(file);
             }
+            e.target.value = '';
+        });
+
+        // QRで紹介カードを追加ボタン → 画像ファイル選択
+        document.getElementById('import-qr-btn').addEventListener('click', function() {
+            document.getElementById('import-qr-file').click();
+        });
+
+        // QRコード画像を読み取り、紹介カードとして追加
+        document.getElementById('import-qr-file').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            e.target.value = '';
+            if (!file || !file.type.match(/^image\//)) return;
+            var img = new Image();
+            var url = URL.createObjectURL(file);
+            img.onload = function() {
+                URL.revokeObjectURL(url);
+                var canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var code = typeof jsQR === 'function' ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' }) : null;
+                if (code && code.data) {
+                    try {
+                        var parsed = JSON.parse(code.data);
+                        if (parsed.type === 'introduction-card' && parsed.book) {
+                            addBookFromIntroductionCard(parsed);
+                        } else {
+                            showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                        }
+                    } catch (err) {
+                        showToast('QRコードの内容を読み取れませんでした。紹介カードのQR画像を選んでください。', 'error');
+                    }
+                } else {
+                    showToast('QRコードが検出されませんでした。画像を選び直すか、QRがはっきり映っているか確認してください。', 'error');
+                }
+            };
+            img.onerror = function() {
+                URL.revokeObjectURL(url);
+                showToast('画像の読み込みに失敗しました。', 'error');
+            };
+            img.src = url;
         });
 
         // データをエクスポートする関数
@@ -2409,39 +2459,46 @@ if (imageData) {
             }
         }
 
-        // 任意のコンテナにQRコードを描画し、ダウンロード用URLを返す（失敗時はnull）
-        // qrcodejsがcanvasの代わりにtableを出力する環境でも、tableをcanvasに描き直して返す
-        function drawQRCode(containerEl, text, size) {
-            if (!containerEl || typeof QRCode === 'undefined') return null;
-            size = size || 256;
-            containerEl.innerHTML = '';
-            try {
-                new QRCode(containerEl, { text: text, width: size, height: size });
-                var canvas = containerEl.querySelector('canvas');
-                if (canvas) return canvas.toDataURL('image/png');
-                var table = containerEl.querySelector('table');
-                if (table && table.rows && table.rows.length > 0) {
-                    var c = document.createElement('canvas');
-                    c.width = size;
-                    c.height = size;
-                    var ctx = c.getContext('2d');
-                    var rows = table.rows.length;
-                    var cols = table.rows[0].cells.length;
-                    var cellW = size / cols;
-                    var cellH = size / rows;
-                    var getStyle = window.getComputedStyle ? function(cell) { return window.getComputedStyle(cell).backgroundColor; } : function(cell) { return cell.style.backgroundColor || ''; };
-                    for (var r = 0; r < rows; r++) {
-                        for (var col = 0; col < cols; col++) {
-                            var cell = table.rows[r].cells[col];
-                            var bg = (cell.style && cell.style.backgroundColor) || getStyle(cell) || '';
-                            var isDark = (bg === 'black' || bg === '#000' || bg === '#000000' || bg === 'rgb(0, 0, 0)' || bg.replace(/\s/g, '').indexOf('0,0,0') !== -1);
-                            ctx.fillStyle = isDark ? '#000000' : '#ffffff';
-                            ctx.fillRect(col * cellW, r * cellH, cellW + 1, cellH + 1);
-                        }
-                    }
-                    return c.toDataURL('image/png');
+        // UTF-8でバイト列に変換（日本語対応）
+        function utf8StringToBytes(s) {
+            var bytes = [];
+            for (var i = 0; i < s.length; i++) {
+                var c = s.charCodeAt(i);
+                if (c < 128) bytes.push(c);
+                else if (c < 2048) {
+                    bytes.push(0xC0 | (c >> 6));
+                    bytes.push(0x80 | (c & 63));
+                } else if (c < 65536) {
+                    bytes.push(0xE0 | (c >> 12));
+                    bytes.push(0x80 | ((c >> 6) & 63));
+                    bytes.push(0x80 | (c & 63));
+                } else {
+                    bytes.push(0xF0 | (c >> 18));
+                    bytes.push(0x80 | ((c >> 12) & 63));
+                    bytes.push(0x80 | ((c >> 6) & 63));
+                    bytes.push(0x80 | (c & 63));
                 }
-                return null;
+            }
+            return bytes;
+        }
+
+        // QRコードを生成し、DataURLを返す（qrcode-generator 使用）
+        function drawQRCode(containerEl, text, size) {
+            size = size || 256;
+            if (typeof qrcode !== 'function') return null;
+            try {
+                if (qrcode.stringToBytes) qrcode.stringToBytes = utf8StringToBytes;
+                var qr = qrcode(0, 'M');
+                qr.addData(text, 'Byte');
+                qr.make();
+                var n = qr.getModuleCount();
+                var margin = 8;
+                var cellSize = Math.max(1, Math.floor((size - margin * 2) / n));
+                var dataUrl = qr.createDataURL(cellSize, margin);
+                if (containerEl && dataUrl) {
+                    containerEl.innerHTML = '<img src="' + dataUrl + '" alt="QR" width="' + size + '" height="' + size + '" style="max-width:100%;height:auto;">';
+                }
+                return dataUrl || null;
             } catch (e) {
                 return null;
             }
@@ -2496,7 +2553,7 @@ if (imageData) {
                 tooLongEl.classList.remove('hidden');
                 return;
             }
-            if (typeof QRCode === 'undefined') {
+            if (typeof qrcode !== 'function') {
                 tooLongEl.textContent = 'QRコードを利用できません。JSONでダウンロードしてください。';
                 tooLongEl.classList.remove('hidden');
                 return;
@@ -2517,6 +2574,33 @@ if (imageData) {
                     : 'QRコードの生成に失敗しました。JSONでダウンロードしてください。';
                 tooLongEl.classList.remove('hidden');
             }
+        }
+
+        // 紹介カードデータを1冊分「人からの紹介」として追加する
+        function addBookFromIntroductionCard(importedData) {
+            if (!importedData || importedData.type !== 'introduction-card' || !importedData.book) return false;
+            var b = importedData.book;
+            var maxId = books.length ? Math.max.apply(null, books.map(function(x) { return x.id; })) : 0;
+            var newBook = {
+                id: maxId + 1,
+                title: b.title || '',
+                author: b.author || '',
+                reader: b.reader || '',
+                coverColor: b.coverColor || '#6366f1',
+                coverImage: b.coverImage || null,
+                coverImageUrl: b.imageUrl || null,
+                status: 'wantToRead',
+                review: b.review || b.comment || '',
+                rating: parseInt(b.rating, 10) || 0,
+                isbn: b.isbn || null,
+                fromIntroduction: true
+            };
+            books.push(newBook);
+            saveBooks();
+            renderBooks(currentFilter);
+            renderWantToReadSection();
+            showToast('紹介カードを「読みたい！」に追加しました（人からの紹介）', 'success');
+            return true;
         }
 
         // データをインポートする関数
@@ -2558,27 +2642,7 @@ if (imageData) {
                     }
                     // 紹介カード形式のインポート（1冊分を「人からの紹介」として追加）
                     else if (importedData.type === 'introduction-card' && importedData.book) {
-                        var b = importedData.book;
-                        var maxId = books.length ? Math.max.apply(null, books.map(function(x) { return x.id; })) : 0;
-                        var newBook = {
-                            id: maxId + 1,
-                            title: b.title || '',
-                            author: b.author || '',
-                            reader: b.reader || '',
-                            coverColor: b.coverColor || '#6366f1',
-                            coverImage: b.coverImage || null,
-                            coverImageUrl: b.imageUrl || null,
-                            status: 'wantToRead',
-                            review: b.review || b.comment || '',
-                            rating: parseInt(b.rating, 10) || 0,
-                            isbn: b.isbn || null,
-                            fromIntroduction: true
-                        };
-                        books.push(newBook);
-                        saveBooks();
-                        renderBooks(currentFilter);
-                        renderWantToReadSection();
-                        showToast('紹介カードを「読みたい！」に追加しました（人からの紹介）', 'success');
+                        addBookFromIntroductionCard(importedData);
                     } else {
                         throw new Error('Invalid data format');
                     }
