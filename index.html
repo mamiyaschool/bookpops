@@ -135,6 +135,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            touch-action: none;
         }
         .mini-book .drag-handle svg {
             width: 18px;
@@ -229,6 +230,58 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+        #card-preview-container {
+            position: relative;
+        }
+        .card-preview.bg-draggable {
+            cursor: grab;
+            touch-action: none;
+        }
+        .card-preview.bg-draggable.dragging {
+            cursor: grabbing;
+        }
+        #comment-edit-controls {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        #comment-selection-box {
+            position: absolute;
+            border: 3px dashed #2563eb;
+            border-radius: 10px;
+            background: rgba(37, 99, 235, 0.07);
+            pointer-events: none;
+        }
+        #comment-font-buttons {
+            position: absolute;
+            display: inline-flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .comment-font-btn {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #334155;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+        #comment-resize-handle {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 5px;
+            border: 2px solid #2563eb;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            pointer-events: auto;
+            cursor: nwse-resize;
+            touch-action: none;
+        }
         #card-container {
             position: relative;
             width: 600px;
@@ -258,8 +311,51 @@
             display: flex;
             flex-direction: column;
         }
-        #download-link {
+        #download-link.hidden {
             display: none;
+        }
+        #print-sheet {
+            display: none;
+        }
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            body > * {
+                display: none !important;
+            }
+            #print-sheet {
+                display: flex !important;
+                position: static !important;
+                width: 148mm;
+                height: 210mm;
+                margin: 0 auto;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 0;
+                box-sizing: border-box;
+                background: #fff;
+                page-break-inside: avoid;
+            }
+            #print-sheet .print-card {
+                width: 148mm;
+                height: 105mm;
+            }
+            #print-sheet .print-card img {
+                width: 148mm;
+                height: 105mm;
+                display: block;
+                object-fit: fill;
+            }
         }
         .slide-down {
             max-height: 0;
@@ -524,9 +620,9 @@
                     </svg>
                     データをインポート
                 </button>
-                <button id="import-qr-btn" class="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center" title="QRコード画像を読み取って紹介カードを追加">
+                <button id="import-qr-btn" class="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center" title="QRコード画像を読み取って本の紹介を追加">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm3-6h1v1h-1v-1zm0 3h1v1h-1v-1zm0 3h1v1h-1v-1z"/></svg>
-                    QRで紹介カードを追加
+                    QRで追加
                 </button>
                 <input type="file" id="import-file" accept=".json" class="hidden">
                 <input type="file" id="import-qr-file" accept="image/*" capture="environment" class="hidden">
@@ -694,20 +790,27 @@
 
             <div id="card-creation-section" class="mt-12 bg-white p-6 rounded-lg shadow-md hidden">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-gray-800">紹介カードを作成</h2>
+                    <h2 class="text-xl font-semibold text-gray-800">本の紹介を作成</h2>
                     <button id="close-card-form" class="text-gray-500 hover:text-gray-700 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-                <p class="text-gray-600 mb-4">本の情報を確認して、おすすめとして投稿できる紹介カードを作成しましょう</p>
+                <p class="text-gray-600 mb-4">本の情報を確認して、おすすめとして投稿できる本の紹介を作成しましょう</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <form id="card-form" class="space-y-4">
                             <div>
-                                <label for="card-title" class="block text-sm font-medium text-gray-700">タイトル</label>
+                                <div class="flex items-center justify-between gap-2">
+                                    <label for="card-title" class="block text-sm font-medium text-gray-700">タイトル</label>
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-xs text-gray-700">文字サイズ <span id="card-title-font-size-value">100%</span></p>
+                                        <button type="button" id="title-font-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
+                                        <button type="button" id="title-font-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
+                                    </div>
+                                </div>
                                 <input type="text" id="card-title" name="card-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required>
                             </div>
                             <div>
@@ -719,7 +822,16 @@
                                 <input type="text" id="card-reader" name="card-reader" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
                             </div>
                             <div>
-                                <label for="card-cover-image" class="block text-sm font-medium text-gray-700">表紙画像（任意）※著作権に注意</label>　※著作権に注意<a href="https://www.hanmoto.com/" target="_blank">　　［版元ドットコム］</a>　などでチェック
+                                <label for="card-video-url" class="block text-sm font-medium text-gray-700">紹介動画URL（任意）</label>
+                                <input type="url" id="card-video-url" name="card-video-url" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://example.com/video">
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span class="text-xs text-gray-700">動画QRサイズ <span id="card-video-qr-size-value">100%</span></span>
+                                    <button type="button" id="video-qr-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
+                                    <button type="button" id="video-qr-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="card-cover-image" class="block text-sm font-medium text-gray-700">紹介イラストなど（任意）※著作権に注意</label>　※著作権に注意<a href="https://www.hanmoto.com/" target="_blank">　　［版元ドットコム］</a>　などでチェック
                                 <div class="mt-1 flex items-center">
                                     <button type="button" id="card-select-image-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                         画像を選択
@@ -730,6 +842,18 @@
                                 <div id="card-image-preview-container" class="mt-2 hidden">
                                     <img id="card-image-preview" class="h-40 w-auto object-cover rounded-md" src="" alt="プレビュー">
                                     <button type="button" id="card-remove-image" class="mt-1 text-sm text-red-600 hover:text-red-800">削除</button>
+                                </div>
+                                <div id="card-bg-controls" class="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 hidden">
+                                    <p class="text-xs text-gray-600 mb-2">紹介動画URLを入れると動画QRを表示します（QRはドラッグ可）。紹介文エリアをタップすると、文字サイズボタンと破線枠＋リサイズハンドルが表示されます。</p>
+                                    <div class="space-y-2">
+                                        <label for="card-bg-scale" class="block text-xs text-gray-700">拡大縮小 <span id="card-bg-scale-value">100%</span></label>
+                                        <input type="range" id="card-bg-scale" min="20" max="220" value="100" class="w-full">
+                                    </div>
+                                    <div class="space-y-2 mt-2">
+                                        <label for="card-bg-opacity" class="block text-xs text-gray-700">透明度 <span id="card-bg-opacity-value">22%</span></label>
+                                        <input type="range" id="card-bg-opacity" min="0" max="100" value="22" class="w-full">
+                                    </div>
+                                    <button type="button" id="card-bg-reset-btn" class="mt-3 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-100">配置をリセット</button>
                                 </div>
                             </div>
                             <div>
@@ -762,28 +886,35 @@
                         <div class="mb-4">
                             <h3 class="text-lg font-medium text-gray-800 mb-2">プレビュー</h3>
                             <div id="card-preview-container" class="flex justify-center">
-                                <canvas id="card-canvas" width="600" height="315" class="card-preview hidden"></canvas>
+                                <canvas id="card-canvas" width="1184" height="840" class="card-preview hidden"></canvas>
                                 <div id="preview-placeholder" class="w-full max-w-md h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
                                     カードを生成するとここにプレビューが表示されます
                                 </div>
+                                <div id="comment-edit-controls" class="hidden">
+                                    <div id="comment-selection-box"></div>
+                                    <div id="comment-font-buttons">
+                                        <button type="button" id="comment-font-decrease-btn" class="comment-font-btn">文字を小さく</button>
+                                        <button type="button" id="comment-font-increase-btn" class="comment-font-btn">文字を大きく</button>
+                                    </div>
+                                    <div id="comment-resize-handle"></div>
+                                </div>
                             </div>
-                            <div id="card-preview-btn-wrap" class="mt-3 text-center">
+                            <div id="card-preview-btn-wrap" class="mt-3 flex flex-wrap items-center justify-center gap-2">
                                 <button type="button" id="card-preview-toggle-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium">
                                     プレビュー
+                                </button>
+                                <a id="download-link" href="#" download="book-card.jpg" class="hidden inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    画像をダウンロード
+                                </a>
+                                <button type="button" id="card-print-btn" class="hidden inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    印刷
                                 </button>
                             </div>
                         </div>
                         <div id="download-container" class="hidden space-y-6">
                             <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                <h4 class="text-sm font-semibold text-gray-700 mb-2">カードを生成（画像）</h4>
-                                <p class="text-sm text-gray-600 mb-3">画像ファイルとしてダウンロードし、SNSや印刷で共有できます。</p>
-                                <a id="download-link" href="#" download="book-card.jpg" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                画像をダウンロード
-                            </a>
-                            </div>
-                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
                                 <h4 class="text-sm font-semibold text-gray-700 mb-2">データ保存</h4>
-                                <p class="text-sm text-gray-600 mb-3">紹介カードのデータをJSONで保存・共有できます。受け取った方は「データをインポート」で読み込むと「人からの紹介」として追加されます。</p>
+                                <p class="text-sm text-gray-600 mb-3">本の紹介データをJSONで保存・共有できます。受け取った方は「データをインポート」で読み込むと「人からの紹介」として追加されます。</p>
                                 <a id="download-card-json" href="#" class="inline-flex justify-center py-2 px-4 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">データを保存（JSON）</a>
                             </div>
                         </div>
@@ -798,6 +929,11 @@
                 <p>わたしの読書記録</p>
             </div>
         </footer>
+    </div>
+
+    <div id="print-sheet" aria-hidden="true">
+        <div class="print-card"><img id="print-card-img-top" alt="print-top"></div>
+        <div class="print-card"><img id="print-card-img-bottom" alt="print-bottom"></div>
     </div>
 
     <!-- 本の詳細モーダル（タップで表示） -->
@@ -827,11 +963,11 @@
             <p class="text-gray-500 text-xs mb-2" id="book-detail-reader"></p>
             <div class="text-yellow-500 mb-2" id="book-detail-stars"></div>
             <span class="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-3" id="book-detail-status-badge">読書中</span>
-            <span class="from-introduction-badge hidden" id="book-detail-from-introduction">人からの紹介</span>
+            <span class="from-introduction-badge hidden" id="book-detail-from-introduction">人からのPOP</span>
             <p class="text-gray-600 text-sm mb-4 whitespace-pre-wrap" id="book-detail-review"></p>
             <div class="flex flex-wrap gap-2">
                 <button type="button" class="book-detail-edit-btn px-3 py-1.5 text-sm text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50" data-id="">編集</button>
-                <button type="button" class="book-detail-card-btn px-3 py-1.5 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50" data-id="">紹介カード作成</button>
+                <button type="button" class="book-detail-card-btn px-3 py-1.5 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50" data-id="">本の紹介作成</button>
                 <button type="button" class="book-detail-status-btn px-3 py-1.5 text-sm rounded border hidden" data-id="" data-target-status="completed">読んだ！にする</button>
                 <button type="button" class="book-detail-status-btn px-3 py-1.5 text-sm rounded border hidden" data-id="" data-target-status="reading">読書中にする</button>
                 <button type="button" class="book-detail-status-btn px-3 py-1.5 text-sm rounded border hidden" data-id="" data-target-status="wantToRead">読みたい！に戻す</button>
@@ -871,16 +1007,16 @@
         </div>
     </div>
 
-    <!-- 紹介カードQRカメラ読み取りモーダル -->
+    <!-- 本のPOP QRカメラ読み取りモーダル -->
     <div id="card-qr-scan-modal" class="modal">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-3">
-                <h3 class="text-lg font-medium text-gray-900">QRで紹介カードを追加</h3>
+                <h3 class="text-lg font-medium text-gray-900">QRで追加</h3>
                 <button type="button" id="card-qr-scan-close" class="text-gray-500 hover:text-gray-700 focus:outline-none">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
-            <p class="text-sm text-gray-600 mb-3">紹介カードのQRコードをガイド枠内に合わせると、自動で追加します。</p>
+            <p class="text-sm text-gray-600 mb-3">本の紹介のQRコードをガイド枠内に合わせると、自動で追加します。</p>
             <div id="card-qr-scan-viewport" class="mb-3">
                 <video id="card-qr-scan-video" autoplay playsinline muted></video>
                 <div id="card-qr-scan-guide" aria-hidden="true"></div>
@@ -899,7 +1035,7 @@
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-medium text-gray-900 mb-4">保存したデータを読み込みますか？</h3>
-            <p class="text-gray-600 mb-6">読書記録（JSONファイル）を読み込むことができます。紹介カードのデータも「データをインポート」で取り込めます。紹介カードとして読み込んだ本は「人からの紹介」として表示されます。</p>
+            <p class="text-gray-600 mb-6">読書記録（JSONファイル）を読み込むことができます。本の紹介データも「データをインポート」で取り込めます。本の紹介として読み込んだ本は「人からの紹介」として表示されます。</p>
             <div class="flex justify-end space-x-3">
                 <button id="cancel-import" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400">
                     いいえ
@@ -963,11 +1099,11 @@
         </div>
     </div>
 
-    <!-- 紹介カード保存モーダル（JSON + QRコード） -->
+    <!-- 本のPOP保存モーダル（JSON + QRコード） -->
     <div id="card-save-modal" class="modal">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">紹介カードのデータを保存</h3>
+                <h3 class="text-lg font-medium text-gray-900">本の紹介データを保存</h3>
                 <button type="button" id="card-save-modal-close" class="text-gray-500 hover:text-gray-700 focus:outline-none">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -977,8 +1113,8 @@
                 <div id="card-qr-container" class="inline-block p-2 bg-white rounded border border-gray-200"></div>
                 <p id="card-qr-too-long" class="text-sm text-amber-600 hidden">データが長いためQRコードにできません。JSONでダウンロードしてください。</p>
                 <div class="flex flex-wrap justify-center gap-2">
-                    <a id="card-qr-download" href="#" download="紹介カード-QR.png" class="hidden inline-flex items-center px-4 py-2 border border-gray-600 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50">QRコード画像をダウンロード</a>
-                    <a id="card-json-download" href="#" download="紹介カード.json" class="inline-flex items-center px-4 py-2 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50">JSONをダウンロード</a>
+                    <a id="card-qr-download" href="#" download="本の紹介-QR.png" class="hidden inline-flex items-center px-4 py-2 border border-gray-600 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50">QRコード画像をダウンロード</a>
+                    <a id="card-json-download" href="#" download="本の紹介.json" class="inline-flex items-center px-4 py-2 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50">JSONをダウンロード</a>
                 </div>
             </div>
         </div>
@@ -1033,6 +1169,54 @@
 
         // ISBNから取得した表紙画像URL（フォーム用）
         let fetchedCoverUrl = null;
+        let cardBackgroundSettings = {
+            scale: 1,
+            opacity: 0.22,
+            offsetX: 0,
+            offsetY: 0
+        };
+        let cardBackgroundDrag = {
+            active: false,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            target: null
+        };
+        let cardElementOffsets = {
+            badge: { x: 0, y: 0 },
+            title: { x: 0, y: 0 },
+            author: { x: 0, y: 0 },
+            ratingLabel: { x: 0, y: 0 },
+            stars: { x: 0, y: 0 },
+            commentBox: { x: 0, y: 0 },
+            reader: { x: 0, y: 0 },
+            footer: { x: 0, y: 0 },
+            qrCode: { x: 0, y: 0 }
+        };
+        let cardElementBounds = {};
+        let cardCommentSettings = {
+            fontScale: 120,
+            boxWidth: 100,
+            boxHeight: 100
+        };
+        let cardQrSettings = {
+            scale: 100
+        };
+        let cardTitleSettings = {
+            fontScale: 100
+        };
+        let cardCommentMetrics = {
+            baseWidth: 0,
+            baseHeight: 0
+        };
+        let cardCommentEditor = {
+            selected: false,
+            resizing: false,
+            startClientX: 0,
+            startClientY: 0,
+            startWidth: 100,
+            startHeight: 100
+        };
 
         // ISBNを13桁に正規化（ハイフン除去、10桁の場合は978付き13桁に変換）
         function normalizeIsbn13(value) {
@@ -1231,6 +1415,16 @@
             return div.innerHTML;
         }
 
+        function normalizeVideoUrl(url) {
+            var value = (url || '').trim();
+            if (!value) return '';
+            try {
+                var u = new URL(value);
+                if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString();
+            } catch (err) {}
+            return '';
+        }
+
         // ローカルストレージからデータを読み込む
         function loadBooks() {
             const storedBooks = localStorage.getItem('books');
@@ -1241,6 +1435,7 @@
                     if (!book.hasOwnProperty('reader')) book.reader = "";
                     if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
                     if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
+                    if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
                 });
             }
 
@@ -1319,7 +1514,7 @@
             if (introBadge) {
                 if (book.fromIntroduction) {
                     introBadge.classList.remove('hidden');
-                    introBadge.textContent = '人からの紹介';
+                    introBadge.textContent = '人からのPOP';
                 } else {
                     introBadge.classList.add('hidden');
                 }
@@ -1378,6 +1573,7 @@
 
         // 現在のフィルター状態（null=すべて＝読書中+読んだ！のみ, 'reading', 'completed'）
         var currentFilter = null;
+        var suppressBookTapUntil = 0;
 
         // 本を表示する関数（メインエリア：読書中・読んだ！のみ。読みたい！は別セクションで表示）
         function renderBooks(filterStatus = null) {
@@ -1429,6 +1625,7 @@
                 
                 // タップで詳細表示（ドラッグハンドル上では開かない）
                 miniBook.addEventListener('click', function(e) {
+                    if (Date.now() < suppressBookTapUntil) return;
                     if (e.target.closest('.drag-handle')) return;
                     showBookDetail(book.id);
                 });
@@ -1447,6 +1644,50 @@
                             miniBook.classList.remove('dragging');
                             document.querySelectorAll('.mini-book.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
                         });
+                        handle.addEventListener('touchstart', function(e) {
+                            if (!e.touches || e.touches.length === 0) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            suppressBookTapUntil = Date.now() + 500;
+                            var sourceIndex = parseInt(miniBook.dataset.bookIndex, 10);
+                            if (!Number.isInteger(sourceIndex)) return;
+                            var targetIndex = sourceIndex;
+                            miniBook.classList.add('dragging');
+                            function clearDragOver() {
+                                document.querySelectorAll('.mini-book.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+                            }
+                            function onMove(ev) {
+                                if (!ev.touches || ev.touches.length === 0) return;
+                                ev.preventDefault();
+                                var t = ev.touches[0];
+                                var touched = document.elementFromPoint(t.clientX, t.clientY);
+                                var target = touched ? touched.closest('.mini-book') : null;
+                                clearDragOver();
+                                if (target && target.dataset.bookIndex != null) {
+                                    target.classList.add('drag-over');
+                                    var idx = parseInt(target.dataset.bookIndex, 10);
+                                    if (Number.isInteger(idx)) targetIndex = idx;
+                                }
+                            }
+                            function finish(ev) {
+                                if (ev) ev.preventDefault();
+                                document.removeEventListener('touchmove', onMove);
+                                document.removeEventListener('touchend', finish);
+                                document.removeEventListener('touchcancel', finish);
+                                miniBook.classList.remove('dragging');
+                                clearDragOver();
+                                if (targetIndex === sourceIndex) return;
+                                var item = books.splice(sourceIndex, 1)[0];
+                                var insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+                                books.splice(insertIndex, 0, item);
+                                saveBooks();
+                                renderBooks(currentFilter);
+                                showToast('順序を変更しました', 'success');
+                            }
+                            document.addEventListener('touchmove', onMove, { passive: false });
+                            document.addEventListener('touchend', finish, { passive: false });
+                            document.addEventListener('touchcancel', finish, { passive: false });
+                        }, { passive: false });
                     }
                     miniBook.addEventListener('dragover', function(e) {
                         e.preventDefault();
@@ -1524,16 +1765,22 @@
                         document.getElementById('card-title').value = book.title;
                         document.getElementById('card-author').value = book.author;
                         document.getElementById('card-reader').value = book.reader || '';
+                        document.getElementById('card-video-url').value = book.videoUrl || '';
                         document.getElementById('card-comment').value = book.review;
                         document.getElementById('card-rating').value = book.rating;
                         highlightCardStars(book.rating);
                         
                         // 画像があれば設定
                         if (book.coverImage) {
+                            resetCardBackgroundSettings();
                             displayCardImagePreview(book.coverImage);
+                            document.getElementById('card-file-name').textContent = '既存画像';
                         } else {
                             // 画像プレビューをリセット
+                            document.getElementById('card-image-preview').src = '';
                             document.getElementById('card-image-preview-container').classList.add('hidden');
+                            document.getElementById('card-bg-controls').classList.add('hidden');
+                            resetCardBackgroundSettings();
                             document.getElementById('card-file-name').textContent = '選択されていません';
                         }
                         
@@ -2167,6 +2414,7 @@
         document.getElementById('card-cover-image').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                resetCardBackgroundSettings();
                 document.getElementById('card-file-name').textContent = file.name;
                 
                 const reader = new FileReader();
@@ -2181,14 +2429,207 @@
         function displayCardImagePreview(imageData) {
             document.getElementById('card-image-preview').src = imageData;
             document.getElementById('card-image-preview-container').classList.remove('hidden');
+            document.getElementById('card-bg-controls').classList.remove('hidden');
+            document.getElementById('card-canvas').classList.add('bg-draggable');
+        }
+
+        function resetCardBackgroundSettings() {
+            cardBackgroundSettings.scale = 1;
+            cardBackgroundSettings.opacity = 0.22;
+            cardBackgroundSettings.offsetX = 0;
+            cardBackgroundSettings.offsetY = 0;
+            cardTitleSettings.fontScale = 100;
+            cardCommentSettings.fontScale = 120;
+            cardCommentSettings.boxWidth = 100;
+            cardCommentSettings.boxHeight = 100;
+            cardQrSettings.scale = 100;
+            cardElementOffsets = {
+                badge: { x: 0, y: 0 },
+                title: { x: 0, y: 0 },
+                author: { x: 0, y: 0 },
+                ratingLabel: { x: 0, y: 0 },
+                stars: { x: 0, y: 0 },
+                commentBox: { x: 0, y: 0 },
+                reader: { x: 0, y: 0 },
+                footer: { x: 0, y: 0 },
+                qrCode: { x: 0, y: 0 }
+            };
+            cardCommentEditor.selected = false;
+            cardCommentEditor.resizing = false;
+            var scaleEl = document.getElementById('card-bg-scale');
+            var opacityEl = document.getElementById('card-bg-opacity');
+            var titleLabelEl = document.getElementById('card-title-font-size-value');
+            if (scaleEl) scaleEl.value = '100';
+            if (opacityEl) opacityEl.value = '22';
+            if (titleLabelEl) titleLabelEl.textContent = '100%';
+            var qrSizeLabelEl = document.getElementById('card-video-qr-size-value');
+            if (qrSizeLabelEl) qrSizeLabelEl.textContent = '100%';
+            syncCardBackgroundLabels();
+            hideCommentEditControls();
+        }
+
+        function syncCardBackgroundLabels() {
+            var scaleEl = document.getElementById('card-bg-scale');
+            var opacityEl = document.getElementById('card-bg-opacity');
+            var scaleLabel = document.getElementById('card-bg-scale-value');
+            var opacityLabel = document.getElementById('card-bg-opacity-value');
+            var titleLabel = document.getElementById('card-title-font-size-value');
+            var qrSizeLabel = document.getElementById('card-video-qr-size-value');
+            if (scaleEl && scaleLabel) scaleLabel.textContent = scaleEl.value + '%';
+            if (opacityEl && opacityLabel) opacityLabel.textContent = opacityEl.value + '%';
+            if (titleLabel) titleLabel.textContent = cardTitleSettings.fontScale + '%';
+            if (qrSizeLabel) qrSizeLabel.textContent = cardQrSettings.scale + '%';
+        }
+
+        function hideCommentEditControls() {
+            var controls = document.getElementById('comment-edit-controls');
+            if (controls) controls.classList.add('hidden');
+        }
+
+        function updateCommentEditControls() {
+            var controls = document.getElementById('comment-edit-controls');
+            var fontBtns = document.getElementById('comment-font-buttons');
+            var handle = document.getElementById('comment-resize-handle');
+            var selection = document.getElementById('comment-selection-box');
+            var canvas = document.getElementById('card-canvas');
+            var wrap = document.getElementById('card-preview-container');
+            var bound = cardElementBounds.commentBox;
+            if (!controls || !fontBtns || !handle || !selection || !canvas || !wrap || !bound || canvas.classList.contains('hidden') || !cardCommentEditor.selected) {
+                hideCommentEditControls();
+                return;
+            }
+            var canvasRect = canvas.getBoundingClientRect();
+            var wrapRect = wrap.getBoundingClientRect();
+            var scale = canvas.width > 0 ? (canvasRect.width / canvas.width) : 1;
+            var left = (canvasRect.left - wrapRect.left) + (bound.x * scale);
+            var top = (canvasRect.top - wrapRect.top) + (bound.y * scale);
+            var width = bound.w * scale;
+            var height = bound.h * scale;
+
+            controls.classList.remove('hidden');
+            selection.style.left = Math.round(left) + 'px';
+            selection.style.top = Math.round(top) + 'px';
+            selection.style.width = Math.round(width) + 'px';
+            selection.style.height = Math.round(height) + 'px';
+            fontBtns.style.left = Math.round(left + Math.max(0, width - 250)) + 'px';
+            fontBtns.style.top = Math.round(top - 50) + 'px';
+            handle.style.left = Math.round(left + width - 14) + 'px';
+            handle.style.top = Math.round(top + height - 14) + 'px';
+        }
+
+        function getCardPreviewImageData() {
+            var src = document.getElementById('card-image-preview').src;
+            if (!src || src === window.location.href) return null;
+            return src;
+        }
+
+        function renderCardPreviewSilently() {
+            var canvasEl = document.getElementById('card-canvas');
+            if (!canvasEl || canvasEl.classList.contains('hidden')) return;
+            generateBookCard(
+                document.getElementById('card-title').value,
+                document.getElementById('card-author').value,
+                document.getElementById('card-reader').value,
+                document.getElementById('card-video-url').value,
+                getCardPreviewImageData(),
+                document.getElementById('card-comment').value,
+                parseInt(document.getElementById('card-rating').value, 10) || 0,
+                { preview: true, silent: true }
+            );
         }
 
         // カード用画像削除ボタン
         document.getElementById('card-remove-image').addEventListener('click', function() {
             document.getElementById('card-cover-image').value = '';
             document.getElementById('card-file-name').textContent = '選択されていません';
+            document.getElementById('card-image-preview').src = '';
             document.getElementById('card-image-preview-container').classList.add('hidden');
+            document.getElementById('card-bg-controls').classList.add('hidden');
+            resetCardBackgroundSettings();
         });
+
+        document.getElementById('card-bg-scale').addEventListener('input', function(e) {
+            cardBackgroundSettings.scale = (parseInt(e.target.value, 10) || 100) / 100;
+            syncCardBackgroundLabels();
+            renderCardPreviewSilently();
+        });
+
+        document.getElementById('card-bg-opacity').addEventListener('input', function(e) {
+            cardBackgroundSettings.opacity = Math.max(0, Math.min(1, (parseInt(e.target.value, 10) || 22) / 100));
+            syncCardBackgroundLabels();
+            renderCardPreviewSilently();
+        });
+
+        function changeCommentFontScale(delta) {
+            cardCommentSettings.fontScale = Math.max(60, Math.min(320, cardCommentSettings.fontScale + delta));
+            syncCardBackgroundLabels();
+            renderCardPreviewSilently();
+        }
+
+        document.getElementById('comment-font-decrease-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeCommentFontScale(-20);
+        });
+
+        document.getElementById('comment-font-increase-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeCommentFontScale(20);
+        });
+
+        function changeTitleFontScale(delta) {
+            cardTitleSettings.fontScale = Math.max(60, Math.min(180, cardTitleSettings.fontScale + delta));
+            syncCardBackgroundLabels();
+            renderCardPreviewSilently();
+        }
+
+        document.getElementById('title-font-decrease-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeTitleFontScale(-10);
+        });
+
+        document.getElementById('title-font-increase-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeTitleFontScale(10);
+        });
+
+        function changeVideoQrScale(delta) {
+            cardQrSettings.scale = Math.max(40, Math.min(220, cardQrSettings.scale + delta));
+            syncCardBackgroundLabels();
+            renderCardPreviewSilently();
+        }
+
+        document.getElementById('video-qr-decrease-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeVideoQrScale(-20);
+        });
+
+        document.getElementById('video-qr-increase-btn').addEventListener('pointerdown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            changeVideoQrScale(20);
+        });
+
+        document.getElementById('comment-resize-handle').addEventListener('pointerdown', function(e) {
+            if (!cardCommentEditor.selected) return;
+            cardCommentEditor.resizing = true;
+            cardCommentEditor.startClientX = e.clientX;
+            cardCommentEditor.startClientY = e.clientY;
+            cardCommentEditor.startWidth = cardCommentSettings.boxWidth;
+            cardCommentEditor.startHeight = cardCommentSettings.boxHeight;
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.getElementById('card-bg-reset-btn').addEventListener('click', function() {
+            resetCardBackgroundSettings();
+            renderCardPreviewSilently();
+        });
+        syncCardBackgroundLabels();
 
         // フォーム送信のイベントリスナー
         document.getElementById('add-book-form').addEventListener('submit', function(e) {
@@ -2297,221 +2738,440 @@
             const title = document.getElementById('card-title').value;
             const author = document.getElementById('card-author').value;
             const readerName = document.getElementById('card-reader').value;
+            const videoUrl = document.getElementById('card-video-url').value;
             const comment = document.getElementById('card-comment').value;
             const rating = parseInt(document.getElementById('card-rating').value) || 0;
-            const imageInput = document.getElementById('card-cover-image');
             const isPreview = mode === 'preview';
-
-            function runGenerate(imageData) {
-                // 外部URL画像（http/https）はCORS制限でキャンバスに描画できないため、
-                // カード生成では表紙なし扱いとし、エラーで止まらないようにする
-                if (imageData && typeof imageData === 'string' && !imageData.startsWith('data:')) {
-                    imageData = null;
-                }
-                generateBookCard(title, author, readerName, imageData, comment, rating, { preview: isPreview });
-            }
-
-            if (imageInput.files && imageInput.files[0]) {
-                const fileReader = new FileReader();
-                fileReader.onload = function(e) {
-                    runGenerate(e.target.result);
-                };
-                fileReader.readAsDataURL(imageInput.files[0]);
-            } else if (document.getElementById('card-image-preview').src && document.getElementById('card-image-preview').src !== window.location.href) {
-                runGenerate(document.getElementById('card-image-preview').src);
-            } else {
-                runGenerate(null);
-            }
+            const imageData = getCardPreviewImageData();
+            generateBookCard(title, author, readerName, videoUrl, imageData, comment, rating, { preview: isPreview });
         }
 
-        // 本の紹介カードを生成する関数
-        function generateBookCard(title, author, reader, imageData, comment, rating, options) {
+        // 本のPOPを生成する関数
+        function generateBookCard(title, author, reader, videoUrl, imageData, comment, rating, options) {
             options = options || {};
             const isPreviewOnly = options.preview === true;
+            const isSilent = options.silent === true;
             const canvas = document.getElementById('card-canvas');
             const ctx = canvas.getContext('2d');
+            // A6横比率（148:105）に合わせた固定キャンバス
+            const POP_WIDTH = 1184;
+            const POP_HEIGHT = 840;
+            if (canvas.width !== POP_WIDTH || canvas.height !== POP_HEIGHT) {
+                canvas.width = POP_WIDTH;
+                canvas.height = POP_HEIGHT;
+            }
+            const pagePadding = Math.round(canvas.width * 0.05);
+            const safeTitle = (title || '（タイトル未入力）').trim();
+            const safeAuthor = (author || '（著者未入力）').trim();
+            const safeComment = (comment || 'おすすめポイントを書いてみよう！').trim();
+
+            // 外部URL画像（http/https）はCORS制限でキャンバスに描画できないため、
+            // カード生成では背景なし扱いにする
+            if (imageData && typeof imageData === 'string' && !imageData.startsWith('data:')) {
+                imageData = null;
+            }
             
             // キャンバスをクリア
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // 背景のグラデーション
-            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-            gradient.addColorStop(0, '#f0f9ff');
-            gradient.addColorStop(1, '#e0f2fe');
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#fef9c3');
+            gradient.addColorStop(0.55, '#dbeafe');
+            gradient.addColorStop(1, '#fae8ff');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // ほんよみカード帯を追加
-            ctx.fillStyle = '#3B82F6';
-            ctx.fillRect(0, 0, canvas.width, 40);
-            
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px "Noto Sans JP", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('ほんよみカード', canvas.width / 2, 27);
-            
- // 左側に表紙画像またはカラーブロック
-if (imageData) {
-    const img = new Image();
-    img.onload = function() {
-        // 画像を左側に描画(縦横比を維持）
-        const maxWidth = canvas.width * 0.4;
-        const maxHeight = canvas.height - 40; // 帯の高さを引く
-   
-        // 縦横比を維持しながら最大サイズを計算
-        let drawWidth, drawHeight;
-        const aspectRatio = img.width / img.height; // ここを修正: imag → img
-        
-        if (aspectRatio > maxWidth / maxHeight) {
-            // 横長の画像
-            drawWidth = maxWidth;
-            drawHeight = drawWidth / aspectRatio; // ここを修正: drawaHeight → drawHeight
-        } else {
-            // 縦長の画像
-            drawHeight = maxHeight;
-            drawWidth = drawHeight * aspectRatio;
-        }
 
-        // 中央に配置するための位置を計算
-        const x = (maxWidth - drawWidth) / 2;
-        const y = 40 + (maxHeight - drawHeight) / 2;
-
-        // 背景を描写（透明部分対策）
-        ctx.fillStyle = '#f8f9fa';
-        ctx.fillRect(0, 40, maxWidth, maxHeight);
-
-        // 画像を描写
-        ctx.drawImage(img, 0, 0, img.width, img.height, x, y, drawWidth, drawHeight);
-        
-        completeCardDrawing();
-    };
-                if (imageData.startsWith('data:')) {
-                    img.src = imageData;
-                } else {
-                    img.crossOrigin = 'Anonymous';
-                    img.src = imageData;
-                }
-            } else {
-                // 画像がない場合はカラーブロックを表示
-                ctx.fillStyle = '#3B82F6';
-                ctx.fillRect(0, 40, canvas.width * 0.4, canvas.height - 40);
-                
-                // タイトルと著者を表示
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px "Noto Sans JP", sans-serif';
-                ctx.textAlign = 'center';
-                wrapText(ctx, title, canvas.width * 0.2, canvas.height * 0.4, canvas.width * 0.35, 30);
-                
-                ctx.font = '18px "Noto Sans JP", sans-serif';
-                ctx.fillText(author, canvas.width * 0.2, canvas.height * 0.6);
-                
-                completeCardDrawing();
-            }
-            
-            function completeCardDrawing() {
-                // 右側のコンテンツ
-                const contentX = canvas.width * 0.45;
-                const contentWidth = canvas.width * 0.5;
-                
-                // タイトル
-                ctx.fillStyle = '#1e3a8a';
-                ctx.font = 'bold 28px "Noto Sans JP", sans-serif';
-                ctx.textAlign = 'left';
-                wrapText(ctx, title, contentX, 80, contentWidth, 34);
-                
-                // 著者
-                ctx.fillStyle = '#64748b';
-                ctx.font = '18px "Noto Sans JP", sans-serif';
-                ctx.fillText(author, contentX, 130);
-                
-                // 区切り線
-                ctx.strokeStyle = '#cbd5e1';
-                ctx.lineWidth = 2;
+            // 楽しい雰囲気を出す装飾ドット
+            var dots = [
+                { x: 70, y: 70, r: 14, c: '#fca5a5' },
+                { x: canvas.width - 100, y: 90, r: 18, c: '#86efac' },
+                { x: canvas.width - 70, y: canvas.height - 80, r: 14, c: '#f9a8d4' },
+                { x: 90, y: canvas.height - 110, r: 16, c: '#93c5fd' },
+                { x: canvas.width * 0.55, y: 60, r: 10, c: '#fde68a' }
+            ];
+            dots.forEach(function(dot) {
+                ctx.fillStyle = dot.c;
+                ctx.globalAlpha = 0.55;
                 ctx.beginPath();
-                ctx.moveTo(contentX, 145);
-                ctx.lineTo(contentX + contentWidth, 145);
-                ctx.stroke();
-                
-                // おすすめ度
-                ctx.fillStyle = '#64748b';
-                ctx.font = '16px "Noto Sans JP", sans-serif';
-                ctx.fillText('おすすめ度（1〜5）:', contentX, 175);
-                
-                // 星
-                ctx.fillStyle = '#f59e0b';
-                ctx.font = '24px sans-serif';
-                let starX = contentX + 150;
-                for (let i = 0; i < 5; i++) {
-                    ctx.fillText(i < rating ? '★' : '☆', starX, 175);
-                    starX += 25;
+                ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            function applyOffset(key, x, y) {
+                var off = cardElementOffsets[key] || { x: 0, y: 0 };
+                return { x: x + off.x, y: y + off.y };
+            }
+
+            function setBound(key, x, y, w, h) {
+                cardElementBounds[key] = { x: x, y: y, w: w, h: h };
+            }
+
+            function drawTextWithShadow(text, x, y) {
+                ctx.save();
+                ctx.shadowColor = 'rgba(255,255,255,0.9)';
+                ctx.shadowBlur = 8;
+                ctx.fillText(text, x, y);
+                ctx.restore();
+            }
+
+            function drawTextWithOutline(text, x, y) {
+                ctx.save();
+                ctx.lineWidth = Math.max(4, Math.round(canvas.height * 0.006));
+                ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+                ctx.strokeText(text, x, y);
+                ctx.fillText(text, x, y);
+                ctx.restore();
+            }
+
+            function buildImportQrText() {
+                // QRが長すぎる場合に備えて段階的に短いデータへフォールバック
+                var candidates = [
+                    {
+                        type: 'book-pop',
+                        book: {
+                            title: safeTitle,
+                            author: safeAuthor,
+                            reader: reader || '',
+                            review: safeComment,
+                            rating: parseInt(rating, 10) || 0
+                        }
+                    },
+                    {
+                        type: 'book-pop',
+                        book: {
+                            title: safeTitle,
+                            author: safeAuthor,
+                            reader: reader || '',
+                            rating: parseInt(rating, 10) || 0
+                        }
+                    }
+                ];
+                for (var i = 0; i < candidates.length; i++) {
+                    try {
+                        var s = JSON.stringify(candidates[i]);
+                        if (s.length <= 1800) return s;
+                    } catch (err) {}
                 }
-                
-                // コメント
+                return '';
+            }
+
+            function completeCardDrawing() {
+                cardElementBounds = {};
+                var contentX = pagePadding;
+                var contentWidth = canvas.width - (pagePadding * 2);
+                var titleBaseY = pagePadding + Math.round(canvas.height * 0.17);
+                var bottomY = canvas.height - pagePadding;
+
+                // 画像が見えるよう、全面パネルは使わず薄い読みやすさ補助のみ
+                var readability = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                readability.addColorStop(0, 'rgba(255,255,255,0.10)');
+                readability.addColorStop(0.45, 'rgba(255,255,255,0.16)');
+                readability.addColorStop(1, 'rgba(255,255,255,0.24)');
+                ctx.fillStyle = readability;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 右上: 本の紹介データを取り込むためのQR
+                var importQrText = buildImportQrText();
+                if (importQrText && typeof qrcode !== 'undefined') {
+                    try {
+                        var labelText = 'わたしの読書記録にインポート';
+                        var importLabelFont = Math.max(9, Math.round(canvas.height * 0.011));
+                        var importLabelGap = 3;
+                        var panelPad = 6;
+                        var topInset = Math.round(canvas.height * 0.018);
+                        var rightInset = Math.round(canvas.width * 0.02);
+                        // タイトルの実フォント上端を考慮して、QRパネルが重ならない最大サイズを算出
+                        var titleFontForTop = Math.round(canvas.height * 0.06 * (cardTitleSettings.fontScale / 100));
+                        titleFontForTop = Math.max(Math.round(canvas.height * 0.03), Math.min(Math.round(canvas.height * 0.12), titleFontForTop));
+                        var titleTopY = titleBaseY - titleFontForTop;
+                        var maxQrByTop = titleTopY - topInset - (panelPad * 2) - importLabelFont - importLabelGap - 6;
+                        var importQrSize = Math.min(Math.round(canvas.width * 0.145), maxQrByTop);
+                        importQrSize = Math.max(52, importQrSize);
+
+                        ctx.font = importLabelFont + 'px "Noto Sans JP", sans-serif';
+                        var labelWidth = Math.ceil(ctx.measureText(labelText).width);
+                        var panelW = Math.max(importQrSize + (panelPad * 2), labelWidth + (panelPad * 2));
+                        var panelH = importQrSize + importLabelFont + importLabelGap + (panelPad * 2);
+                        var panelX = canvas.width - rightInset - panelW;
+                        var panelY = topInset;
+                        var importQrX = panelX + Math.floor((panelW - importQrSize) / 2);
+                        var importQrY = panelY + panelPad + importLabelFont + importLabelGap;
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.96)';
+                        drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 8, true, false);
+
+                        var importQr = qrcode(0, 'L');
+                        importQr.addData(importQrText, 'Byte');
+                        importQr.make();
+                        var importN = importQr.getModuleCount();
+                        var importInner = importQrSize - 8;
+                        var importCell = Math.max(1, Math.floor(importInner / importN));
+                        var importDraw = importCell * importN;
+                        var importOx = importQrX + Math.floor((importQrSize - importDraw) / 2);
+                        var importOy = importQrY + Math.floor((importQrSize - importDraw) / 2);
+
+                        ctx.fillStyle = '#111827';
+                        for (var iy = 0; iy < importN; iy++) {
+                            for (var ix = 0; ix < importN; ix++) {
+                                if (importQr.isDark(iy, ix)) {
+                                    ctx.fillRect(importOx + ix * importCell, importOy + iy * importCell, importCell, importCell);
+                                }
+                            }
+                        }
+
+                        ctx.fillStyle = '#475569';
+                        ctx.font = importLabelFont + 'px "Noto Sans JP", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(labelText, panelX + (panelW / 2), panelY + panelPad + importLabelFont);
+                    } catch (err) {
+                        // QR生成失敗時は何も表示しない
+                    }
+                }
+
+                // ポップなラベル（固定）
+                var badgeBaseX = contentX;
+                var badgeBaseY = pagePadding + Math.round(canvas.height * 0.01);
+                var badgeW = Math.round(contentWidth * 0.28);
+                var badgeH = Math.round(canvas.height * 0.09);
+                ctx.fillStyle = '#ef4444';
+                drawRoundedRect(ctx, badgeBaseX, badgeBaseY, badgeW, badgeH, 20, true, false);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold ' + Math.round(canvas.height * 0.032) + 'px "Noto Sans JP", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('おすすめの１冊！', badgeBaseX + Math.round(badgeW * 0.5), badgeBaseY + Math.round(badgeH * 0.67));
+
+                // タイトル（固定）
+                var titleBaseX = contentX;
+                ctx.fillStyle = '#1e3a8a';
+                var titleFontSize = Math.round(canvas.height * 0.06 * (cardTitleSettings.fontScale / 100));
+                titleFontSize = Math.max(Math.round(canvas.height * 0.03), Math.min(Math.round(canvas.height * 0.12), titleFontSize));
+                var titleLines = [];
+                ctx.font = 'bold ' + titleFontSize + 'px "Noto Sans JP", sans-serif';
+                titleLines = getWrappedLines(ctx, safeTitle, contentWidth, 2);
+                ctx.font = 'bold ' + titleFontSize + 'px "Noto Sans JP", sans-serif';
+                ctx.textAlign = 'left';
+                var titleLineHeight = Math.round(titleFontSize * 1.3);
+                for (var t = 0; t < titleLines.length; t++) {
+                    drawTextWithShadow(titleLines[t], titleBaseX, titleBaseY + (titleLineHeight * t));
+                }
+                var titleBottomY = titleBaseY + ((titleLines.length - 1) * titleLineHeight);
+
+                var authorBaseX = contentX;
+                var authorBaseY = titleBottomY + Math.round(canvas.height * 0.08);
+
+                // 著者（固定）
+                ctx.fillStyle = '#64748b';
+                ctx.font = Math.round(canvas.height * 0.03) + 'px "Noto Sans JP", sans-serif';
+                drawTextWithShadow('作者：' + safeAuthor, authorBaseX, authorBaseY);
+
+                // 紹介文（背景なし・白フチ文字）
+                var commentBoxBaseX = contentX;
+                var commentBoxBaseY = authorBaseY + Math.round(canvas.height * 0.1);
+                var commentBoxW = Math.round(contentWidth * (cardCommentSettings.boxWidth / 100));
+                commentBoxW = Math.max(Math.round(contentWidth * 0.35), Math.min(Math.round(contentWidth * 2.2), commentBoxW));
+                var commentBoxHBase = Math.max(Math.round(canvas.height * 0.36), bottomY - commentBoxBaseY - Math.round(canvas.height * 0.08));
+                var commentBoxH = Math.round(commentBoxHBase * (cardCommentSettings.boxHeight / 100));
+                commentBoxH = Math.max(Math.round(canvas.height * 0.18), Math.min(Math.round(canvas.height * 0.9), commentBoxH));
+                cardCommentMetrics.baseWidth = contentWidth;
+                cardCommentMetrics.baseHeight = commentBoxHBase;
+                var commentPos = applyOffset('commentBox', commentBoxBaseX, commentBoxBaseY);
+                setBound('commentBox', commentPos.x, commentPos.y, commentBoxW, commentBoxH);
+
                 ctx.fillStyle = '#334155';
-                ctx.font = '16px "Noto Sans JP", sans-serif';
-                wrapText(ctx, comment, contentX, 210, contentWidth, 24);
-                
+                var commentFontSize = Math.round(canvas.height * 0.04 * (cardCommentSettings.fontScale / 100));
+                commentFontSize = Math.min(Math.round(canvas.height * 0.2), commentFontSize);
+                ctx.font = commentFontSize + 'px "Noto Sans JP", sans-serif';
+                ctx.textAlign = 'left';
+                var commentLineHeight = Math.round(commentFontSize * 1.25);
+                var commentMaxLines = Math.max(2, Math.floor((commentBoxH - Math.round(canvas.height * 0.02)) / commentLineHeight));
+                var commentLines = getWrappedLines(ctx, safeComment, commentBoxW - 8, commentMaxLines);
+                for (var c = 0; c < commentLines.length; c++) {
+                    drawTextWithOutline(commentLines[c], commentPos.x, commentPos.y + commentFontSize + (c * commentLineHeight));
+                }
+
+                // 紹介動画URLがある場合はQRコードを表示（ドラッグと拡大縮小対応）
+                var videoQrText = normalizeVideoUrl(videoUrl);
+                if (videoQrText && typeof qrcode !== 'undefined') {
+                    try {
+                        var qrBase = Math.round(canvas.width * 0.16);
+                        var qrSize = Math.round(qrBase * (cardQrSettings.scale / 100));
+                        qrSize = Math.max(48, Math.min(Math.round(canvas.width * 0.42), qrSize));
+                        var qrXBase = pagePadding;
+                        var qrYBase = canvas.height - pagePadding - qrSize;
+                        var qrPos = applyOffset('qrCode', qrXBase, qrYBase);
+
+                        // QR背景
+                        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                        drawRoundedRect(ctx, qrPos.x, qrPos.y, qrSize, qrSize, 8, true, false);
+
+                        var qr = qrcode(0, 'L');
+                        qr.addData(videoQrText, 'Byte');
+                        qr.make();
+                        var n = qr.getModuleCount();
+                        var inner = qrSize - 12;
+                        var cell = Math.max(1, Math.floor(inner / n));
+                        var drawSize = cell * n;
+                        var ox = qrPos.x + Math.floor((qrSize - drawSize) / 2);
+                        var oy = qrPos.y + Math.floor((qrSize - drawSize) / 2);
+
+                        ctx.fillStyle = '#111827';
+                        for (var yy = 0; yy < n; yy++) {
+                            for (var xx = 0; xx < n; xx++) {
+                                if (qr.isDark(yy, xx)) {
+                                    ctx.fillRect(ox + xx * cell, oy + yy * cell, cell, cell);
+                                }
+                            }
+                        }
+                        setBound('qrCode', qrPos.x, qrPos.y, qrSize, qrSize);
+                    } catch (err) {
+                        // QR生成失敗時は表示しない
+                    }
+                }
+
                 // 読者情報（あれば）
                 if (reader) {
+                    var readerBaseX = canvas.width - 6;
+                    var readerBaseY = canvas.height - Math.round(canvas.height * 0.045);
                     ctx.fillStyle = '#64748b';
-                    ctx.font = '14px "Noto Sans JP", sans-serif';
+                    ctx.font = Math.round(canvas.height * 0.023) + 'px "Noto Sans JP", sans-serif';
                     ctx.textAlign = 'right';
-                    ctx.fillText(`読んだ人: ${reader}`, canvas.width - 20, canvas.height - 40);
+                    drawTextWithShadow(`しょうかいした人: ${reader}`, readerBaseX, readerBaseY);
                 }
-                
+
                 // フッター
+                var footerBaseX = canvas.width - 6;
+                var footerBaseY = canvas.height - 6;
                 ctx.fillStyle = '#94a3b8';
-                ctx.font = '14px "Noto Sans JP", sans-serif';
+                ctx.font = Math.round(canvas.height * 0.022) + 'px "Noto Sans JP", sans-serif';
                 ctx.textAlign = 'right';
-                ctx.fillText('わたしの読書記録', canvas.width - 20, canvas.height - 20);
-                
+                drawTextWithShadow('わたしの読書記録', footerBaseX, footerBaseY);
+
                 // プレビュー画像を表示
                 var canvasEl = document.getElementById('card-canvas');
                 var placeholderEl = document.getElementById('preview-placeholder');
                 if (canvasEl && placeholderEl) {
                     canvasEl.classList.remove('hidden');
+                    canvasEl.classList.add('bg-draggable');
                     placeholderEl.classList.add('hidden');
                 }
-                
+                updateCommentEditControls();
+
                 if (isPreviewOnly) {
-                    // プレビューのみ（保存UIはまだ表示しない）
                     document.getElementById('download-container').classList.add('hidden');
-                    showToast('プレビューを表示しました', 'success');
+                    var previewDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    var previewDownloadLink = document.getElementById('download-link');
+                    var printBtn = document.getElementById('card-print-btn');
+                    if (previewDownloadLink) {
+                        previewDownloadLink.href = previewDataUrl;
+                        previewDownloadLink.classList.remove('hidden');
+                    }
+                    if (printBtn) printBtn.classList.remove('hidden');
+                    if (!isSilent) showToast('プレビューを表示しました', 'success');
                 } else {
-                    // 本生成（保存用UIを表示）
                     document.getElementById('download-container').classList.remove('hidden');
-                    
-                    // ダウンロードリンクを設定
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    document.getElementById('download-link').href = dataUrl;
-                    document.getElementById('download-link').style.display = 'inline-flex';
-                    
-                    // トースト通知
-                    showToast('紹介カードを生成しました', 'success');
+                    var downloadLink = document.getElementById('download-link');
+                    var printBtnFinal = document.getElementById('card-print-btn');
+                    if (downloadLink) {
+                        downloadLink.href = dataUrl;
+                        downloadLink.classList.remove('hidden');
+                    }
+                    if (printBtnFinal) printBtnFinal.classList.remove('hidden');
+                    showToast('本の紹介を生成しました', 'success');
                 }
+            }
+
+            if (imageData) {
+                var img = new Image();
+                img.onload = function() {
+                    var fillScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                    var drawScale = fillScale * cardBackgroundSettings.scale;
+                    var drawWidth = img.width * drawScale;
+                    var drawHeight = img.height * drawScale;
+                    var x = (canvas.width - drawWidth) / 2 + cardBackgroundSettings.offsetX;
+                    var y = (canvas.height - drawHeight) / 2 + cardBackgroundSettings.offsetY;
+                    ctx.save();
+                    ctx.globalAlpha = cardBackgroundSettings.opacity;
+                    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                    ctx.restore();
+                    completeCardDrawing();
+                };
+                img.onerror = completeCardDrawing;
+                img.src = imageData;
+            } else {
+                completeCardDrawing();
             }
         }
         
-        // テキストを折り返して描画する関数
-        function wrapText(context, text, x, y, maxWidth, lineHeight) {
-            const words = text.split('');
-            let line = '';
-            
-            for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n];
-                const metrics = context.measureText(testLine);
-                const testWidth = metrics.width;
-                
-                if (testWidth > maxWidth && n > 0) {
-                    context.fillText(line, x, y);
-                    line = words[n];
-                    y += lineHeight;
+        function drawRoundedRect(context, x, y, width, height, radius, fill, stroke) {
+            var r = Math.max(0, Math.min(radius, width / 2, height / 2));
+            context.beginPath();
+            context.moveTo(x + r, y);
+            context.lineTo(x + width - r, y);
+            context.quadraticCurveTo(x + width, y, x + width, y + r);
+            context.lineTo(x + width, y + height - r);
+            context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+            context.lineTo(x + r, y + height);
+            context.quadraticCurveTo(x, y + height, x, y + height - r);
+            context.lineTo(x, y + r);
+            context.quadraticCurveTo(x, y, x + r, y);
+            context.closePath();
+            if (fill) context.fill();
+            if (stroke) context.stroke();
+        }
+
+        function getWrappedLines(context, text, maxWidth, maxLines) {
+            var chars = String(text || '').split('');
+            var lines = [];
+            var line = '';
+            var limit = typeof maxLines === 'number' && maxLines > 0 ? maxLines : Infinity;
+            for (var i = 0; i < chars.length; i++) {
+                var testLine = line + chars[i];
+                if (context.measureText(testLine).width > maxWidth && line) {
+                    lines.push(line);
+                    line = chars[i];
+                    if (lines.length >= limit) break;
                 } else {
                     line = testLine;
                 }
             }
-            context.fillText(line, x, y);
+            if (lines.length < limit && line) lines.push(line);
+
+            if (lines.length > limit) lines = lines.slice(0, limit);
+            if (chars.length > 0 && lines.length === limit && i < chars.length) {
+                var last = lines[lines.length - 1];
+                while (last && context.measureText(last + '…').width > maxWidth) {
+                    last = last.slice(0, -1);
+                }
+                lines[lines.length - 1] = (last || '').trimEnd() + '…';
+            }
+            return lines;
+        }
+
+        function drawLines(context, lines, x, y, lineHeight) {
+            for (var i = 0; i < lines.length; i++) {
+                context.fillText(lines[i], x, y + (lineHeight * i));
+            }
+        }
+
+        // テキストを折り返して描画する関数
+        function wrapText(context, text, x, y, maxWidth, lineHeight, maxLines) {
+            var lines = getWrappedLines(context, text, maxWidth, maxLines);
+            drawLines(context, lines, x, y, lineHeight);
+        }
+
+        function getFileTimestamp() {
+            var d = new Date();
+            var y = String(d.getFullYear());
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            var h = String(d.getHours()).padStart(2, '0');
+            var min = String(d.getMinutes()).padStart(2, '0');
+            var s = String(d.getSeconds()).padStart(2, '0');
+            return y + m + day + '-' + h + min + s;
         }
 
         // 感想一覧の表示/非表示を切り替え
@@ -2597,14 +3257,125 @@ if (imageData) {
             handleCardPreview('preview');
         });
 
+        function pointInRect(x, y, rect) {
+            if (!rect) return false;
+            return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+        }
+
+        function pickCardDragTarget(x, y) {
+            var order = ['commentBox', 'qrCode'];
+            for (var i = 0; i < order.length; i++) {
+                var key = order[i];
+                if (pointInRect(x, y, cardElementBounds[key])) return key;
+            }
+            if (getCardPreviewImageData()) return 'background';
+            return null;
+        }
+
+        // プレビュー上で背景や各パーツをドラッグ移動
+        var cardCanvasEl = document.getElementById('card-canvas');
+        cardCanvasEl.addEventListener('pointerdown', function(e) {
+            if (cardCanvasEl.classList.contains('hidden')) return;
+            var rect = cardCanvasEl.getBoundingClientRect();
+            var ratio = rect.width > 0 ? (cardCanvasEl.width / rect.width) : 1;
+            var px = (e.clientX - rect.left) * ratio;
+            var py = (e.clientY - rect.top) * ratio;
+            var target = pickCardDragTarget(px, py);
+            if (!target) {
+                cardCommentEditor.selected = false;
+                updateCommentEditControls();
+                return;
+            }
+            cardCommentEditor.selected = target === 'commentBox';
+            updateCommentEditControls();
+            cardBackgroundDrag.active = true;
+            cardBackgroundDrag.pointerId = e.pointerId;
+            cardBackgroundDrag.startX = e.clientX;
+            cardBackgroundDrag.startY = e.clientY;
+            cardBackgroundDrag.target = target;
+            cardCanvasEl.classList.add('dragging');
+            if (cardCanvasEl.setPointerCapture) cardCanvasEl.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        });
+        window.addEventListener('pointermove', function(e) {
+            if (cardCommentEditor.resizing) {
+                var rect = cardCanvasEl.getBoundingClientRect();
+                var ratio = rect.width > 0 ? (cardCanvasEl.width / rect.width) : 1;
+                var dx = (e.clientX - cardCommentEditor.startClientX) * ratio;
+                var dy = (e.clientY - cardCommentEditor.startClientY) * ratio;
+                var baseW = cardCommentMetrics.baseWidth || 1;
+                var baseH = cardCommentMetrics.baseHeight || 1;
+                cardCommentSettings.boxWidth = Math.max(35, Math.min(220, cardCommentEditor.startWidth + (dx / baseW) * 100));
+                cardCommentSettings.boxHeight = Math.max(35, Math.min(280, cardCommentEditor.startHeight + (dy / baseH) * 100));
+                renderCardPreviewSilently();
+                return;
+            }
+            if (!cardBackgroundDrag.active) return;
+            var rect = cardCanvasEl.getBoundingClientRect();
+            var ratio = rect.width > 0 ? (cardCanvasEl.width / rect.width) : 1;
+            var dx = (e.clientX - cardBackgroundDrag.startX) * ratio;
+            var dy = (e.clientY - cardBackgroundDrag.startY) * ratio;
+            if (cardBackgroundDrag.target === 'background') {
+                cardBackgroundSettings.offsetX += dx;
+                cardBackgroundSettings.offsetY += dy;
+                cardBackgroundSettings.offsetX = Math.max(-cardCanvasEl.width, Math.min(cardCanvasEl.width, cardBackgroundSettings.offsetX));
+                cardBackgroundSettings.offsetY = Math.max(-cardCanvasEl.height, Math.min(cardCanvasEl.height, cardBackgroundSettings.offsetY));
+            } else if (cardBackgroundDrag.target && cardElementOffsets[cardBackgroundDrag.target]) {
+                cardElementOffsets[cardBackgroundDrag.target].x += dx;
+                cardElementOffsets[cardBackgroundDrag.target].y += dy;
+                cardElementOffsets[cardBackgroundDrag.target].x = Math.max(-cardCanvasEl.width, Math.min(cardCanvasEl.width, cardElementOffsets[cardBackgroundDrag.target].x));
+                cardElementOffsets[cardBackgroundDrag.target].y = Math.max(-cardCanvasEl.height, Math.min(cardCanvasEl.height, cardElementOffsets[cardBackgroundDrag.target].y));
+            }
+            cardBackgroundDrag.startX = e.clientX;
+            cardBackgroundDrag.startY = e.clientY;
+            renderCardPreviewSilently();
+        });
+        function stopCardBackgroundDrag() {
+            cardBackgroundDrag.active = false;
+            cardBackgroundDrag.pointerId = null;
+            cardBackgroundDrag.target = null;
+            cardCanvasEl.classList.remove('dragging');
+            cardCommentEditor.resizing = false;
+        }
+        window.addEventListener('pointerup', stopCardBackgroundDrag);
+        window.addEventListener('pointercancel', stopCardBackgroundDrag);
+        window.addEventListener('resize', updateCommentEditControls);
+
+        // A6横2枚を縦に並べたA5縦印刷
+        document.getElementById('card-print-btn').addEventListener('click', function() {
+            var cardCanvas = document.getElementById('card-canvas');
+            if (!cardCanvas || cardCanvas.classList.contains('hidden')) {
+                showToast('先にプレビューまたはカード生成をしてください', 'error');
+                return;
+            }
+            var dataUrl = cardCanvas.toDataURL('image/png');
+            var topImg = document.getElementById('print-card-img-top');
+            var bottomImg = document.getElementById('print-card-img-bottom');
+            if (!topImg || !bottomImg) {
+                showToast('印刷用エリアの準備に失敗しました', 'error');
+                return;
+            }
+            topImg.src = dataUrl;
+            bottomImg.src = dataUrl;
+            // iPad Safariでも押下直後に印刷画面へ遷移しやすいよう最小遅延で実行
+            setTimeout(function() {
+                window.print();
+            }, 30);
+        });
+
         // カード作成フォームを閉じるボタン
         document.getElementById('close-card-form').addEventListener('click', function() {
             document.getElementById('card-creation-section').classList.add('hidden');
+            stopCardBackgroundDrag();
+            cardCommentEditor.selected = false;
+            hideCommentEditControls();
             
             // プレビューをリセット
             document.getElementById('card-canvas').classList.add('hidden');
             document.getElementById('preview-placeholder').classList.remove('hidden');
             document.getElementById('download-container').classList.add('hidden');
+            document.getElementById('download-link').classList.add('hidden');
+            document.getElementById('card-print-btn').classList.add('hidden');
             var toggleBtn = document.getElementById('card-preview-toggle-btn');
             if (toggleBtn) toggleBtn.textContent = 'プレビュー';
         });
@@ -2622,7 +3393,7 @@ if (imageData) {
                 }
             }
             var payload = {
-                type: 'introduction-card',
+                type: 'book-pop',
                 book: {
                     title: document.getElementById('card-title').value,
                     author: document.getElementById('card-author').value,
@@ -2637,7 +3408,7 @@ if (imageData) {
             var blob = new Blob([jsonStr], { type: 'application/json' });
             var url = URL.createObjectURL(blob);
             document.getElementById('card-json-download').href = url;
-            document.getElementById('card-json-download').download = '紹介カード.json';
+            document.getElementById('card-json-download').download = '本の紹介-' + getFileTimestamp() + '.json';
             showCardSaveModalWithQR(jsonStr);
         });
 
@@ -2684,12 +3455,12 @@ if (imageData) {
             e.target.value = '';
         });
 
-        // QRコード文字列を読み取り、紹介カードとして追加
+        // QRコード文字列を読み取り、本のPOPとして追加
         function tryAddFromQRData(dataStr) {
             if (!dataStr) return false;
             try {
                 var parsed = JSON.parse(dataStr);
-                if (parsed.type === 'introduction-card' && parsed.book) {
+                if ((parsed.type === 'book-pop' || parsed.type === 'introduction-card') && parsed.book) {
                     if (document.getElementById('card-qr-scan-modal').style.display === 'flex') {
                         closeCardQrScanModal();
                     }
@@ -2700,10 +3471,10 @@ if (imageData) {
             return false;
         }
         function showQRScanError() {
-            showToast('QRコードが検出されませんでした。紹介カードの「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
+            showToast('QRコードが検出されませんでした。本の紹介の「QRコード画像をダウンロード」で保存した画像を使うか、QRがはっきり映った画像を選んでください。', 'error');
         }
 
-        // 紹介カードQRのカメラ自動読み取り
+        // 本のPOP QRのカメラ自動読み取り
         var cardQrScanStream = null;
         var cardQrScanTimer = null;
         var cardQrScanBusy = false;
@@ -2849,7 +3620,7 @@ if (imageData) {
             });
         }
 
-        // QRで紹介カードを追加ボタン
+        // QRで本のPOPを追加ボタン
         document.getElementById('import-qr-btn').addEventListener('click', function() {
             openCardQrScanModal();
         });
@@ -2861,7 +3632,7 @@ if (imageData) {
             document.getElementById('import-qr-file').click();
         });
 
-        // QRコード画像を読み取り、紹介カードとして追加
+        // QRコード画像を読み取り、本のPOPとして追加
         document.getElementById('import-qr-file').addEventListener('change', function(e) {
             var file = e.target.files[0];
             e.target.value = '';
@@ -2885,7 +3656,7 @@ if (imageData) {
                     : html5Scanner.scanFile(file, false);
                 scanPromise.then(function(decodedText) {
                     if (tryAddFromQRData(decodedText)) return;
-                    showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                    showToast('このQRコードは本の紹介データではありません。', 'error');
                 }).catch(function() {
                     decodeQRWithCanvas(file);
                 }).finally(function() {
@@ -2961,7 +3732,7 @@ if (imageData) {
                     detectNext(0);
                     return;
                 }
-                if (decoded) showToast('このQRコードは紹介カードのデータではありません。', 'error');
+                if (decoded) showToast('このQRコードは本の紹介データではありません。', 'error');
                 else if (!jsQRFn) showToast('QR読み取り機能を利用できません。ブラウザを更新するか、JSONでインポートしてください。', 'error');
                 else showQRScanError();
             };
@@ -2993,7 +3764,7 @@ if (imageData) {
                 // エクスポートモーダルのダウンロードリンクを設定
                 const exportLink = document.getElementById('export-download-link');
                 exportLink.href = url;
-                exportLink.download = `${ownerName}の読書記録.json`;
+                exportLink.download = `${ownerName}の読書記録-${getFileTimestamp()}.json`;
                 
                 // モーダルを表示
                 showModal('export-modal');
@@ -3053,7 +3824,7 @@ if (imageData) {
             }
         }
 
-        // 紹介カード保存モーダルを開き、QRコードを表示
+        // 本のPOP保存モーダルを開き、QRコードを表示
         function showCardSaveModalWithQR(jsonString) {
             var container = document.getElementById('card-qr-container');
             var tooLongEl = document.getElementById('card-qr-too-long');
@@ -3079,7 +3850,7 @@ if (imageData) {
                 var dataUrl = drawQRCode(container, strForQR, 256);
                 if (dataUrl) {
                     downloadLink.href = dataUrl;
-                    downloadLink.download = '紹介カード-QR.png';
+                    downloadLink.download = '本の紹介-QR.png';
                     downloadLink.classList.remove('hidden');
                 } else {
                     tooLongEl.textContent = 'QRコードの生成に失敗しました。JSONでダウンロードしてください。';
@@ -3125,9 +3896,9 @@ if (imageData) {
             }
         }
 
-        // 紹介カードデータを1冊分「人からの紹介」として追加する
+        // 本のPOPデータを1冊分「人からの紹介」として追加する
         function addBookFromIntroductionCard(importedData) {
-            if (!importedData || importedData.type !== 'introduction-card' || !importedData.book) return false;
+            if (!importedData || (importedData.type !== 'book-pop' && importedData.type !== 'introduction-card') || !importedData.book) return false;
             var b = importedData.book;
             var maxId = books.length ? Math.max.apply(null, books.map(function(x) { return x.id; })) : 0;
             var newBook = {
@@ -3148,7 +3919,7 @@ if (imageData) {
             saveBooks();
             renderBooks(currentFilter);
             renderWantToReadSection();
-            showToast('紹介カードを「読みたい！」に追加しました（人からの紹介）', 'success');
+            showToast('本の紹介を「読みたい！」に追加しました（人からの紹介）', 'success');
             return true;
         }
 
@@ -3167,6 +3938,7 @@ if (imageData) {
                             if (!book.hasOwnProperty('reader')) book.reader = "";
                             if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
                             if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
+                            if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
                         });
                         saveMetadata();
                         saveBooks();
@@ -3182,6 +3954,7 @@ if (imageData) {
                             if (!book.hasOwnProperty('reader')) book.reader = "";
                             if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
                             if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
+                            if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
                         });
                         saveBooks();
                         renderBooks(currentFilter);
@@ -3189,8 +3962,8 @@ if (imageData) {
                         updateHeaderWithMetadata();
                         showToast('データをインポートしました', 'success');
                     }
-                    // 紹介カード形式のインポート（1冊分を「人からの紹介」として追加）
-                    else if (importedData.type === 'introduction-card' && importedData.book) {
+                    // 本のPOP形式のインポート（1冊分を「人からの紹介」として追加）
+                    else if ((importedData.type === 'book-pop' || importedData.type === 'introduction-card') && importedData.book) {
                         addBookFromIntroductionCard(importedData);
                     } else {
                         throw new Error('Invalid data format');
@@ -3248,12 +4021,20 @@ if (imageData) {
                     document.getElementById('card-title').value = book.title;
                     document.getElementById('card-author').value = book.author;
                     document.getElementById('card-reader').value = book.reader || '';
+                    document.getElementById('card-video-url').value = book.videoUrl || '';
                     document.getElementById('card-comment').value = book.review || '';
                     document.getElementById('card-rating').value = book.rating;
                     if (typeof highlightCardStars === 'function') highlightCardStars(book.rating);
                     if (book.coverImage) {
-                        document.getElementById('card-image-preview').src = book.coverImage;
-                        document.getElementById('card-image-preview-container').classList.remove('hidden');
+                        resetCardBackgroundSettings();
+                        displayCardImagePreview(book.coverImage);
+                        document.getElementById('card-file-name').textContent = '既存画像';
+                    } else {
+                        document.getElementById('card-image-preview').src = '';
+                        document.getElementById('card-image-preview-container').classList.add('hidden');
+                        document.getElementById('card-bg-controls').classList.add('hidden');
+                        resetCardBackgroundSettings();
+                        document.getElementById('card-file-name').textContent = '選択されていません';
                     }
                 }
             } else if (statusBtn && statusBtn.dataset.id && statusBtn.dataset.targetStatus) {
