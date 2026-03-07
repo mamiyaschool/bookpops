@@ -2830,13 +2830,11 @@
                 // QRが長すぎる場合に備えて段階的に短いデータへフォールバック
                 var candidates = [
                     {
+                        // 読み取り優先: まず最小構成
                         type: 'book-pop',
                         book: {
                             title: safeTitle,
-                            author: safeAuthor,
-                            reader: reader || '',
-                            review: safeComment,
-                            rating: parseInt(rating, 10) || 0
+                            author: safeAuthor
                         }
                     },
                     {
@@ -2847,12 +2845,23 @@
                             reader: reader || '',
                             rating: parseInt(rating, 10) || 0
                         }
+                    },
+                    {
+                        type: 'book-pop',
+                        book: {
+                            title: safeTitle,
+                            author: safeAuthor,
+                            reader: reader || '',
+                            rating: parseInt(rating, 10) || 0,
+                            // 文字数を絞って可読性を優先
+                            review: (safeComment || '').slice(0, 80)
+                        }
                     }
                 ];
                 for (var i = 0; i < candidates.length; i++) {
                     try {
                         var s = JSON.stringify(candidates[i]);
-                        if (s.length <= 1800) return s;
+                        if (s.length <= 900) return s;
                     } catch (err) {}
                 }
                 return '';
@@ -2907,8 +2916,8 @@
                         importQr.addData(importQrText, 'Byte');
                         importQr.make();
                         var importN = importQr.getModuleCount();
-                        var importInner = importQrSize - 8;
-                        var importCell = Math.max(1, Math.floor(importInner / importN));
+                        // quiet zone（4モジュール）を確保して読み取り率を上げる
+                        var importCell = Math.max(1, Math.floor(importQrSize / (importN + 8)));
                         var importDraw = importCell * importN;
                         var importOx = importQrX + Math.floor((importQrSize - importDraw) / 2);
                         var importOy = importQrY + Math.floor((importQrSize - importDraw) / 2);
