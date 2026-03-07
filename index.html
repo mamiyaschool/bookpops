@@ -49,6 +49,8 @@
             width: 100%;
             height: 100%;
         }
+        #card-video-url-details summary::-webkit-details-marker { display: none; }
+        #card-video-url-details summary::marker { content: none; }
         .book-cover {
             height: 200px;
             background-size: contain;
@@ -802,36 +804,41 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <form id="card-form" class="space-y-4">
-                            <div>
-                                <div class="flex items-center justify-between gap-2">
-                                    <label for="card-title" class="block text-sm font-medium text-gray-700">タイトル</label>
-                                    <div class="flex items-center gap-2">
-                                        <p class="text-xs text-gray-700">文字サイズ <span id="card-title-font-size-value">100%</span></p>
-                                        <button type="button" id="title-font-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
-                                        <button type="button" id="title-font-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
+                            <div class="flex flex-wrap items-start gap-4 p-3 rounded-lg border border-gray-200 bg-gray-50/50">
+                                <div id="card-cover-reference-block" class="hidden shrink-0">
+                                    <p class="text-xs text-gray-600 mb-1">参考：表紙</p>
+                                    <img id="card-cover-reference" class="h-28 w-auto object-contain rounded border border-gray-200 bg-white shadow-sm" src="" alt="表紙（参考）">
+                                    <p class="text-xs text-gray-500 mt-1 max-w-[120px]">POPの背景とは別です</p>
+                                </div>
+                                <div class="flex-1 min-w-0 space-y-3">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <label for="card-title" class="block text-sm font-medium text-gray-700">タイトル</label>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs text-gray-600">文字 <span id="card-title-font-size-value">100%</span></span>
+                                                <button type="button" id="title-font-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
+                                                <button type="button" id="title-font-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
+                                            </div>
+                                        </div>
+                                        <textarea id="card-title" name="card-title" rows="3" class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 resize-y text-base" placeholder="本のタイトル" required></textarea>
+                                    </div>
+                                    <div>
+                                        <label for="card-author" class="block text-sm font-medium text-gray-700">著者</label>
+                                        <input type="text" id="card-author" name="card-author" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required>
+                                    </div>
+                                    <div>
+                                        <label for="card-reader" class="block text-sm font-medium text-gray-700">読んだ人</label>
+                                        <input type="text" id="card-reader" name="card-reader" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
                                     </div>
                                 </div>
-                                <input type="text" id="card-title" name="card-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required>
                             </div>
                             <div>
-                                <label for="card-author" class="block text-sm font-medium text-gray-700">著者</label>
-                                <input type="text" id="card-author" name="card-author" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required>
+                                <label for="card-comment" class="block text-sm font-medium text-gray-700">コメント</label>
+                                <textarea id="card-comment" name="card-comment" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required></textarea>
                             </div>
                             <div>
-                                <label for="card-reader" class="block text-sm font-medium text-gray-700">読んだ人</label>
-                                <input type="text" id="card-reader" name="card-reader" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
-                            </div>
-                            <div>
-                                <label for="card-video-url" class="block text-sm font-medium text-gray-700">紹介動画URL（任意）</label>
-                                <input type="url" id="card-video-url" name="card-video-url" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://example.com/video">
-                                <div class="mt-2 flex items-center gap-2">
-                                    <span class="text-xs text-gray-700">動画QRサイズ <span id="card-video-qr-size-value">100%</span></span>
-                                    <button type="button" id="video-qr-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
-                                    <button type="button" id="video-qr-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label for="card-cover-image" class="block text-sm font-medium text-gray-700">紹介イラストなど（任意）※著作権に注意</label>　※著作権に注意<a href="https://www.hanmoto.com/" target="_blank">　　［版元ドットコム］</a>　などでチェック
+                                <label for="card-cover-image" class="block text-sm font-medium text-gray-700">POPの背景画像（任意）</label>
+                                <span class="text-xs text-gray-500">※著作権に注意</span><a href="https://www.hanmoto.com/" target="_blank" class="text-xs ml-1">［版元ドットコム］</a>などでチェック
                                 <div class="mt-1 flex items-center">
                                     <button type="button" id="card-select-image-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                         画像を選択
@@ -843,23 +850,21 @@
                                     <img id="card-image-preview" class="h-40 w-auto object-cover rounded-md" src="" alt="プレビュー">
                                     <button type="button" id="card-remove-image" class="mt-1 text-sm text-red-600 hover:text-red-800">削除</button>
                                 </div>
-                                <div id="card-bg-controls" class="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 hidden">
-                                    <p class="text-xs text-gray-600 mb-2">紹介動画URLを入れると動画QRを表示します（QRはドラッグ可）。紹介文エリアをタップすると、文字サイズボタンと破線枠＋リサイズハンドルが表示されます。</p>
-                                    <div class="space-y-2">
-                                        <label for="card-bg-scale" class="block text-xs text-gray-700">拡大縮小 <span id="card-bg-scale-value">100%</span></label>
-                                        <input type="range" id="card-bg-scale" min="20" max="220" value="100" class="w-full">
+                            </div>
+                            <details class="group border border-gray-200 rounded-md bg-gray-50/50" id="card-video-url-details">
+                                <summary class="cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-gray-700 flex items-center justify-between gap-2">
+                                    <span>紹介動画URL（任意）</span>
+                                    <span class="text-gray-400 group-open:rotate-180 transition-transform inline-block" aria-hidden="true">▼</span>
+                                </summary>
+                                <div class="px-3 pb-3 pt-0 border-t border-gray-200 mt-0">
+                                    <input type="url" id="card-video-url" name="card-video-url" class="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="https://example.com/video">
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <span class="text-xs text-gray-700">動画QRサイズ <span id="card-video-qr-size-value">100%</span></span>
+                                        <button type="button" id="video-qr-decrease-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">小さく</button>
+                                        <button type="button" id="video-qr-increase-btn" class="px-2 py-1 text-xs border border-gray-300 rounded bg-white hover:bg-gray-50">大きく</button>
                                     </div>
-                                    <div class="space-y-2 mt-2">
-                                        <label for="card-bg-opacity" class="block text-xs text-gray-700">透明度 <span id="card-bg-opacity-value">22%</span></label>
-                                        <input type="range" id="card-bg-opacity" min="0" max="100" value="22" class="w-full">
-                                    </div>
-                                    <button type="button" id="card-bg-reset-btn" class="mt-3 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-100">配置をリセット</button>
                                 </div>
-                            </div>
-                            <div>
-                                <label for="card-comment" class="block text-sm font-medium text-gray-700">コメント</label>
-                                <textarea id="card-comment" name="card-comment" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" required></textarea>
-                            </div>
+                            </details>
                             <div>
                                 <label for="card-rating" class="block text-sm font-medium text-gray-700">おすすめ度（1〜5）</label>
                                 <div class="flex items-center mt-1">
@@ -898,6 +903,18 @@
                                     </div>
                                     <div id="comment-resize-handle"></div>
                                 </div>
+                            </div>
+                            <div id="card-bg-controls" class="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 hidden">
+                                <p class="text-xs text-gray-600 mb-2">紹介動画URLを入れると動画QRを表示します（QRはドラッグ可）。紹介文エリアをタップすると、文字サイズボタンと破線枠＋リサイズハンドルが表示されます。</p>
+                                <div class="space-y-2">
+                                    <label for="card-bg-scale" class="block text-xs text-gray-700">拡大縮小 <span id="card-bg-scale-value">100%</span></label>
+                                    <input type="range" id="card-bg-scale" min="20" max="220" value="100" class="w-full">
+                                </div>
+                                <div class="space-y-2 mt-2">
+                                    <label for="card-bg-opacity" class="block text-xs text-gray-700">透明度 <span id="card-bg-opacity-value">22%</span></label>
+                                    <input type="range" id="card-bg-opacity" min="0" max="100" value="22" class="w-full">
+                                </div>
+                                <button type="button" id="card-bg-reset-btn" class="mt-3 px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-100">配置をリセット</button>
                             </div>
                             <div id="card-preview-btn-wrap" class="mt-3 flex flex-wrap items-center justify-center gap-2">
                                 <button type="button" id="card-preview-toggle-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium">
@@ -1169,6 +1186,8 @@
 
         // ISBNから取得した表紙画像URL（フォーム用）
         let fetchedCoverUrl = null;
+        // 本の紹介を「本」から開いたときの参照用（表紙は参考表示のみ。POP背景は別設定）
+        let currentBookForPop = null;
         let cardBackgroundSettings = {
             scale: 1,
             opacity: 0.22,
@@ -1770,19 +1789,14 @@
                         document.getElementById('card-rating').value = book.rating;
                         highlightCardStars(book.rating);
                         
-                        // 画像があれば設定
-                        if (book.coverImage) {
-                            resetCardBackgroundSettings();
-                            displayCardImagePreview(book.coverImage);
-                            document.getElementById('card-file-name').textContent = '既存画像';
-                        } else {
-                            // 画像プレビューをリセット
-                            document.getElementById('card-image-preview').src = '';
-                            document.getElementById('card-image-preview-container').classList.add('hidden');
-                            document.getElementById('card-bg-controls').classList.add('hidden');
-                            resetCardBackgroundSettings();
-                            document.getElementById('card-file-name').textContent = '選択されていません';
-                        }
+                        // 表紙は参考表示のみ。POPの背景画像は別なので預けない
+                        setCardFormBookReference(book);
+                        document.getElementById('card-image-preview').src = '';
+                        document.getElementById('card-image-preview-container').classList.add('hidden');
+                        document.getElementById('card-bg-controls').classList.add('hidden');
+                        document.getElementById('card-cover-image').value = '';
+                        resetCardBackgroundSettings();
+                        document.getElementById('card-file-name').textContent = '選択されていません';
                         
                         // スクロールしてカード作成セクションに移動
                         document.getElementById('card-creation-section').scrollIntoView({ behavior: 'smooth' });
@@ -2425,12 +2439,35 @@
             }
         });
 
-        // カード用画像プレビュー表示
+        // カード用画像プレビュー表示（POPの背景画像用）
         function displayCardImagePreview(imageData) {
             document.getElementById('card-image-preview').src = imageData;
             document.getElementById('card-image-preview-container').classList.remove('hidden');
             document.getElementById('card-bg-controls').classList.remove('hidden');
             document.getElementById('card-canvas').classList.add('bg-draggable');
+        }
+
+        // 本から開いたとき：表紙を参考表示のみにする
+        function setCardFormBookReference(book) {
+            currentBookForPop = book;
+            var block = document.getElementById('card-cover-reference-block');
+            var img = document.getElementById('card-cover-reference');
+            if (!block || !img) return;
+            if (book && (book.coverImage || book.coverImageUrl)) {
+                img.src = book.coverImage || book.coverImageUrl || '';
+                block.classList.remove('hidden');
+            } else {
+                block.classList.add('hidden');
+                img.src = '';
+            }
+        }
+
+        function clearCardFormBookReference() {
+            currentBookForPop = null;
+            var block = document.getElementById('card-cover-reference-block');
+            var img = document.getElementById('card-cover-reference');
+            if (block) block.classList.add('hidden');
+            if (img) img.src = '';
         }
 
         function resetCardBackgroundSettings() {
@@ -2761,7 +2798,7 @@
                 canvas.height = POP_HEIGHT;
             }
             const pagePadding = Math.round(canvas.width * 0.05);
-            const safeTitle = (title || '（タイトル未入力）').trim();
+            const safeTitle = (title || '（タイトル未入力）').trim().replace(/\s+/g, ' ');
             const safeAuthor = (author || '（著者未入力）').trim();
             const safeComment = (comment || 'おすすめポイントを書いてみよう！').trim();
 
@@ -3375,6 +3412,7 @@
         // カード作成フォームを閉じるボタン
         document.getElementById('close-card-form').addEventListener('click', function() {
             document.getElementById('card-creation-section').classList.add('hidden');
+            clearCardFormBookReference();
             stopCardBackgroundDrag();
             cardCommentEditor.selected = false;
             hideCommentEditControls();
@@ -3391,20 +3429,17 @@
 
         document.getElementById('download-card-json').addEventListener('click', function(e) {
             e.preventDefault();
-            var imgEl = document.getElementById('card-image-preview-container');
             var coverImage = null;
             var imageUrl = null;
-            if (imgEl && !imgEl.classList.contains('hidden')) {
-                var src = document.getElementById('card-image-preview').src;
-                if (src) {
-                    if (src.indexOf('data:') === 0) coverImage = src;
-                    else if (src.indexOf('http') === 0) imageUrl = src;
-                }
+            if (currentBookForPop) {
+                if (currentBookForPop.coverImage && currentBookForPop.coverImage.indexOf('data:') === 0) coverImage = currentBookForPop.coverImage;
+                else if (currentBookForPop.coverImageUrl) imageUrl = currentBookForPop.coverImageUrl;
+                else if (currentBookForPop.coverImage && currentBookForPop.coverImage.indexOf('http') === 0) imageUrl = currentBookForPop.coverImage;
             }
             var payload = {
                 type: 'book-pop',
                 book: {
-                    title: document.getElementById('card-title').value,
+                    title: document.getElementById('card-title').value.trim().replace(/\s+/g, ' '),
                     author: document.getElementById('card-author').value,
                     reader: document.getElementById('card-reader').value,
                     review: document.getElementById('card-comment').value,
@@ -4034,17 +4069,13 @@
                     document.getElementById('card-comment').value = book.review || '';
                     document.getElementById('card-rating').value = book.rating;
                     if (typeof highlightCardStars === 'function') highlightCardStars(book.rating);
-                    if (book.coverImage) {
-                        resetCardBackgroundSettings();
-                        displayCardImagePreview(book.coverImage);
-                        document.getElementById('card-file-name').textContent = '既存画像';
-                    } else {
-                        document.getElementById('card-image-preview').src = '';
-                        document.getElementById('card-image-preview-container').classList.add('hidden');
-                        document.getElementById('card-bg-controls').classList.add('hidden');
-                        resetCardBackgroundSettings();
-                        document.getElementById('card-file-name').textContent = '選択されていません';
-                    }
+                    setCardFormBookReference(book);
+                    document.getElementById('card-image-preview').src = '';
+                    document.getElementById('card-image-preview-container').classList.add('hidden');
+                    document.getElementById('card-bg-controls').classList.add('hidden');
+                    document.getElementById('card-cover-image').value = '';
+                    resetCardBackgroundSettings();
+                    document.getElementById('card-file-name').textContent = '選択されていません';
                 }
             } else if (statusBtn && statusBtn.dataset.id && statusBtn.dataset.targetStatus) {
                 var bookId = parseInt(statusBtn.dataset.id, 10);
