@@ -632,11 +632,11 @@
                     <div class="data-menu-buttons flex flex-wrap gap-2 p-2 border-t border-gray-100">
                         <button id="export-btn" class="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                            エクスポート
+                            共有
                         </button>
                         <button id="import-btn" class="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" transform="rotate(180, 10, 10)" /></svg>
-                            インポート
+                            読み込み
                         </button>
                         <button id="import-qr-btn" class="px-3 py-1.5 bg-amber-500 text-white rounded text-sm hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 flex items-center" title="QRコード画像を読み取って本の紹介を追加">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm-3 3h1v1h-1v-1zm2 2h1v1h-1v-1zm3-6h1v1h-1v-1zm0 3h1v1h-1v-1zm0 3h1v1h-1v-1z"/></svg>
@@ -948,7 +948,7 @@
                         <div id="download-container" class="hidden space-y-6">
                             <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
                                 <h4 class="text-sm font-semibold text-gray-700 mb-2">データ保存</h4>
-                                <p class="text-sm text-gray-600 mb-3">本の紹介データをJSONで保存・共有できます。受け取った方は「データをインポート」で読み込むと「人からの紹介」として追加されます。</p>
+                                <p class="text-sm text-gray-600 mb-3">本の紹介データをJSONで保存・共有できます。受け取った方は「データを読み込み」で読み込むと「人からの紹介」として追加されます。</p>
                                 <a id="download-card-json" href="#" class="inline-flex justify-center py-2 px-4 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">データを保存（JSON）</a>
                             </div>
                         </div>
@@ -1069,7 +1069,7 @@
     <div id="import-modal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-medium text-gray-900 mb-4">保存したデータを読み込みますか？</h3>
-            <p class="text-gray-600 mb-6">読書記録（JSONファイル）を読み込むことができます。本の紹介データも「データをインポート」で取り込めます。本の紹介として読み込んだ本は「人からの紹介」として表示されます。</p>
+            <p class="text-gray-600 mb-6">読書記録（JSONファイル）を読み込むことができます。本の紹介データも「データを読み込み」で取り込めます。本の紹介として読み込んだ本は「人からの紹介」として表示されます。</p>
             <div class="flex justify-end space-x-3">
                 <button id="cancel-import" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400">
                     いいえ
@@ -1081,35 +1081,39 @@
         </div>
     </div>
 
-    <!-- エクスポートモーダル -->
+    <!-- 共有モーダル -->
     <div id="export-modal" class="modal">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900">データをエクスポート</h3>
+                <h3 class="text-lg font-medium text-gray-900">データを共有</h3>
                 <button id="close-export-modal" class="text-gray-500 hover:text-gray-700 focus:outline-none">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
-            <p class="text-gray-600 mb-4">QRコードを読み取ると、このアプリでデータを開けます。データが長い場合はJSONをダウンロードして共有してください。</p>
+            <p class="text-gray-600 mb-4">データを保存（JSON形式）するか、データを組み込んだこのHTMLへのURLをコピーして共有できます。</p>
             <div class="text-center space-y-4">
-                <div id="export-qr-container" class="inline-block p-2 bg-white rounded border border-gray-200"></div>
-                <p id="export-qr-too-long" class="text-sm text-amber-600 hidden">データが長いためQRコードにできません。JSONでダウンロードしてください。</p>
                 <div class="flex flex-wrap justify-center gap-2">
-                    <a id="export-qr-download" href="#" download="読書記録-QR.png" class="hidden inline-flex items-center px-4 py-2 border border-gray-600 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50">QRコード画像をダウンロード</a>
                     <a id="export-download-link" href="#" download="読書記録.json" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
-                        JSONファイルをダウンロード
+                        データ保存（JSON形式）
                     </a>
+                    <button type="button" id="export-copy-url-btn" class="inline-flex items-center justify-center px-6 py-3 border border-indigo-600 text-indigo-600 rounded-md text-base font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2H6a1 1 0 01-1-1z" />
+                        </svg>
+                        URLリンクをコピー
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- エクスポート前の名前入力モーダル -->
+    <!-- 共有前の名前入力モーダル -->
     <div id="export-name-modal" class="modal">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
@@ -1120,7 +1124,7 @@
                     </svg>
                 </button>
             </div>
-            <p class="text-gray-600 mb-4">エクスポートするデータに読書記録者の名前を含めることができます。</p>
+            <p class="text-gray-600 mb-4">共有するデータに読書記録者の名前を含めることができます。</p>
             <form id="export-name-form" class="space-y-4">
                 <div>
                     <label for="export-owner-name" class="block text-sm font-medium text-gray-700">読書記録者の名前</label>
@@ -1205,6 +1209,7 @@
             owner: "",
             exportDate: ""
         };
+        var lastExportUrl = '';
 
         // ISBNから取得した表紙画像URL（フォーム用）
         let fetchedCoverUrl = null;
@@ -2945,7 +2950,7 @@
                 var importQrText = buildImportQrText();
                 if (importQrText && typeof qrcode !== 'undefined') {
                     try {
-                        var labelText = 'わたしの読書記録にインポート';
+                        var labelText = 'わたしの読書記録に読み込み';
                         var importLabelFont = Math.max(9, Math.round(canvas.height * 0.011));
                         var importLabelGap = 3;
                         var panelPad = 6;
@@ -3484,12 +3489,12 @@
             hideModal('card-save-modal');
         });
 
-        // データエクスポートボタン
+        // データ共有ボタン
         document.getElementById('export-btn').addEventListener('click', function() {
             showModal('export-name-modal');
         });
 
-        // エクスポート名前フォームの送信
+        // 共有名前フォームの送信
         document.getElementById('export-name-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const ownerName = document.getElementById('export-owner-name').value;
@@ -3497,22 +3502,22 @@
             exportData(ownerName);
         });
 
-        // エクスポート名前フォームのキャンセル
+        // 共有名前フォームのキャンセル
         document.getElementById('cancel-export-name').addEventListener('click', function() {
             hideModal('export-name-modal');
         });
 
-        // エクスポート名前モーダルを閉じる
+        // 共有名前モーダルを閉じる
         document.getElementById('close-export-name-modal').addEventListener('click', function() {
             hideModal('export-name-modal');
         });
 
-        // データインポートボタン
+        // データ読み込みボタン
         document.getElementById('import-btn').addEventListener('click', function() {
             document.getElementById('import-file').click();
         });
 
-        // ファイル選択時のインポート処理
+        // ファイル選択時の読み込み処理
         document.getElementById('import-file').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -3799,7 +3804,7 @@
                     return;
                 }
                 if (decoded) showToast('このQRコードは本の紹介データではありません。', 'error');
-                else if (!jsQRFn) showToast('QR読み取り機能を利用できません。ブラウザを更新するか、JSONでインポートしてください。', 'error');
+                else if (!jsQRFn) showToast('QR読み取り機能を利用できません。ブラウザを更新するか、JSONで読み込みしてください。', 'error');
                 else showQRScanError();
             };
             img.onerror = function() {
@@ -3809,7 +3814,7 @@
             img.src = url;
         }
 
-        // データをエクスポートする関数
+        // データを共有する関数
         function exportData(ownerName) {
             try {
                 // メタデータを更新
@@ -3817,7 +3822,7 @@
                 metadata.exportDate = new Date().toISOString();
                 saveMetadata();
                 
-                // エクスポートデータを作成（books の配列順＝表示順をそのまま保存）
+                // 共有データを作成（books の配列順＝表示順をそのまま保存）
                 const exportData = {
                     metadata: metadata,
                     books: books
@@ -3827,25 +3832,24 @@
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 
-                // エクスポートモーダルのダウンロードリンクを設定
+                // 共有モーダルのダウンロードリンクを設定
                 const exportLink = document.getElementById('export-download-link');
                 exportLink.href = url;
                 exportLink.download = `${ownerName}の読書記録-${getFileTimestamp()}.json`;
                 
-                // このアプリを開くURL（データ付き）をQRコード化
-                var appUrlWithData = getAppBaseUrl() + '#import=' + base64urlEncode(data);
-                updateExportModalQR(appUrlWithData, ownerName);
+                // URLコピー用にデータ付きURLを保持
+                lastExportUrl = getAppBaseUrl() + '#import=' + base64urlEncode(data);
                 
                 // モーダルを表示
                 showModal('export-modal');
                 
                 // トースト通知
-                showToast('エクスポートの準備ができました。リンクをクリックしてダウンロードしてください。', 'success');
+                showToast('共有の準備ができました。', 'success');
                 
                 // ヘッダーを更新
                 updateHeaderWithMetadata();
             } catch (error) {
-                showToast('エクスポート中にエラーが発生しました: ' + error.message, 'error');
+                showToast('共有中にエラーが発生しました: ' + error.message, 'error');
             }
         }
 
@@ -3866,7 +3870,7 @@
             return window.location.href.split('#')[0];
         }
 
-        // インポート済みデータを適用（ファイル読み込み・URL両方から利用）
+        // 読み込み済みデータを適用（ファイル読み込み・URL両方から利用）
         function applyImportedData(importedData) {
             if (!importedData) return false;
             if (importedData.metadata && Array.isArray(importedData.books)) {
@@ -3883,7 +3887,7 @@
                 renderBooks(currentFilter);
                 renderWantToReadSection();
                 updateHeaderWithMetadata();
-                showToast((metadata.owner || '') + 'の読書記録をインポートしました', 'success');
+                showToast((metadata.owner || '') + 'の読書記録を読み込みしました', 'success');
                 return true;
             }
             if (Array.isArray(importedData)) {
@@ -3898,7 +3902,7 @@
                 renderBooks(currentFilter);
                 renderWantToReadSection();
                 updateHeaderWithMetadata();
-                showToast('データをインポートしました', 'success');
+                showToast('データを読み込みしました', 'success');
                 return true;
             }
             if ((importedData.type === 'book-pop' || importedData.type === 'introduction-card') && importedData.book) {
@@ -3990,43 +3994,6 @@
             showModal('card-save-modal');
         }
 
-        // エクスポートモーダル内のQRコードを更新（アプリURL＋データをQRコード化。読み取りでこのアプリに遷移してデータが反映される）
-        function updateExportModalQR(appUrlWithData, ownerName) {
-            const container = document.getElementById('export-qr-container');
-            const tooLongEl = document.getElementById('export-qr-too-long');
-            const downloadLink = document.getElementById('export-qr-download');
-            container.innerHTML = '';
-            tooLongEl.classList.add('hidden');
-            downloadLink.classList.add('hidden');
-            var maxUrlLen = 2000;
-            if (appUrlWithData.length > maxUrlLen) {
-                tooLongEl.textContent = 'データが長いためQRコードにできません（約' + appUrlWithData.length + '文字）。JSONでダウンロードしてください。';
-                tooLongEl.classList.remove('hidden');
-                return;
-            }
-            if (typeof qrcode !== 'function') {
-                tooLongEl.textContent = 'QRコードを利用できません。JSONでダウンロードしてください。';
-                tooLongEl.classList.remove('hidden');
-                return;
-            }
-            try {
-                var dataUrl = drawQRCode(container, appUrlWithData, 256);
-                if (dataUrl) {
-                    downloadLink.href = dataUrl;
-                    downloadLink.download = (ownerName || '読書記録') + '-QR.png';
-                    downloadLink.classList.remove('hidden');
-                } else {
-                    tooLongEl.textContent = 'QRコードの生成に失敗しました。JSONでダウンロードしてください。';
-                    tooLongEl.classList.remove('hidden');
-                }
-            } catch (err) {
-                tooLongEl.textContent = (err && err.message && err.message.indexOf('long') !== -1)
-                    ? 'データが長いためQRコードにできません。JSONでダウンロードしてください。'
-                    : 'QRコードの生成に失敗しました。JSONでダウンロードしてください。';
-                tooLongEl.classList.remove('hidden');
-            }
-        }
-
         // 本のPOPデータを1冊分「人からの紹介」として追加する
         function addBookFromIntroductionCard(importedData) {
             if (!importedData || (importedData.type !== 'book-pop' && importedData.type !== 'introduction-card') || !importedData.book) return false;
@@ -4054,7 +4021,7 @@
             return true;
         }
 
-        // データをインポートする関数
+        // データを読み込みする関数
         function importData(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -4091,6 +4058,18 @@
 
         document.getElementById('close-export-modal').addEventListener('click', function() {
             hideModal('export-modal');
+        });
+        document.getElementById('export-copy-url-btn').addEventListener('click', function() {
+            if (!lastExportUrl) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(lastExportUrl).then(function() {
+                    showToast('URLをコピーしました。このリンクを開くとデータが反映されたアプリが表示されます。', 'success');
+                }).catch(function() {
+                    showToast('コピーに失敗しました。', 'error');
+                });
+            } else {
+                showToast('お使いの環境ではコピーできません。', 'error');
+            }
         });
 
         document.getElementById('book-detail-close').addEventListener('click', hideBookDetail);
@@ -4206,7 +4185,7 @@
                 document.getElementById('reader').value = metadata.owner;
             }
             
-            // 初回表示時にインポートモーダルを表示（QRでデータを開いた場合は表示しない）
+            // 初回表示時に読み込みモーダルを表示（QRでデータを開いた場合は表示しない）
             if (!appliedFromUrl) showModal('import-modal');
         });
     </script>
