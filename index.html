@@ -1092,14 +1092,19 @@
                     </svg>
                 </button>
             </div>
-            <p class="text-gray-600 mb-6">読書記録データをダウンロードしてください。ダウンロードが始まらない場合は、右クリック等で直接保存してください。</p>
+            <p class="text-gray-600 mb-4">QRコードを読み取ると、このアプリでデータを開けます。データが長い場合はJSONをダウンロードして共有してください。</p>
             <div class="text-center space-y-4">
-                <a id="export-download-link" href="#" download="読書記録.json" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                    JSONファイルをダウンロード
-                </a>
+                <div id="export-qr-container" class="inline-block p-2 bg-white rounded border border-gray-200"></div>
+                <p id="export-qr-too-long" class="text-sm text-amber-600 hidden">データが長いためQRコードにできません。JSONでダウンロードしてください。</p>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <a id="export-qr-download" href="#" download="読書記録-QR.png" class="hidden inline-flex items-center px-4 py-2 border border-gray-600 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50">QRコード画像をダウンロード</a>
+                    <a id="export-download-link" href="#" download="読書記録.json" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        JSONファイルをダウンロード
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -1143,7 +1148,7 @@
                 </button>
             </div>
             <div class="text-center space-y-4">
-                <p class="text-sm text-gray-600">QRコードを読み取るか、JSONをダウンロードして共有できます。</p>
+                <p class="text-sm text-gray-600">QRコードを読み取るとこのアプリが開き「人からの紹介」として追加されます。JSONのダウンロードもできます。</p>
                 <div id="card-qr-container" class="inline-block p-2 bg-white rounded border border-gray-200"></div>
                 <p id="card-qr-too-long" class="text-sm text-amber-600 hidden">データが長いためQRコードにできません。JSONでダウンロードしてください。</p>
                 <div class="flex flex-wrap justify-center gap-2">
@@ -3827,6 +3832,10 @@
                 exportLink.href = url;
                 exportLink.download = `${ownerName}の読書記録-${getFileTimestamp()}.json`;
                 
+                // このアプリを開くURL（データ付き）をQRコード化
+                var appUrlWithData = getAppBaseUrl() + '#import=' + base64urlEncode(data);
+                updateExportModalQR(appUrlWithData, ownerName);
+                
                 // モーダルを表示
                 showModal('export-modal');
                 
@@ -3838,6 +3847,64 @@
             } catch (error) {
                 showToast('エクスポート中にエラーが発生しました: ' + error.message, 'error');
             }
+        }
+
+        // URLに載せるためのBase64エンコード（UTF-8対応・URL安全）
+        function base64urlEncode(str) {
+            var base64 = btoa(unescape(encodeURIComponent(str)));
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+        function base64urlDecode(str) {
+            str = str.replace(/-/g, '+').replace(/_/g, '/');
+            var pad = str.length % 4;
+            if (pad) str += new Array(5 - pad).join('=');
+            return decodeURIComponent(escape(atob(str)));
+        }
+
+        // このHTMLアプリのベースURL（QRコード用）
+        function getAppBaseUrl() {
+            return window.location.href.split('#')[0];
+        }
+
+        // インポート済みデータを適用（ファイル読み込み・URL両方から利用）
+        function applyImportedData(importedData) {
+            if (!importedData) return false;
+            if (importedData.metadata && Array.isArray(importedData.books)) {
+                metadata = importedData.metadata;
+                books = importedData.books;
+                books.forEach(function(book) {
+                    if (!book.hasOwnProperty('reader')) book.reader = "";
+                    if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
+                    if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
+                    if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
+                });
+                saveMetadata();
+                saveBooks();
+                renderBooks(currentFilter);
+                renderWantToReadSection();
+                updateHeaderWithMetadata();
+                showToast((metadata.owner || '') + 'の読書記録をインポートしました', 'success');
+                return true;
+            }
+            if (Array.isArray(importedData)) {
+                books = importedData;
+                books.forEach(function(book) {
+                    if (!book.hasOwnProperty('reader')) book.reader = "";
+                    if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
+                    if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
+                    if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
+                });
+                saveBooks();
+                renderBooks(currentFilter);
+                renderWantToReadSection();
+                updateHeaderWithMetadata();
+                showToast('データをインポートしました', 'success');
+                return true;
+            }
+            if ((importedData.type === 'book-pop' || importedData.type === 'introduction-card') && importedData.book) {
+                return addBookFromIntroductionCard(importedData);
+            }
+            return false;
         }
 
         // UTF-8でバイト列に変換（日本語対応）
@@ -3885,7 +3952,7 @@
             }
         }
 
-        // 本のPOP保存モーダルを開き、QRコードを表示
+        // 本のPOP保存モーダルを開き、QRコードを表示（読み取りでこのアプリに遷移し「人からの紹介」として追加されるURLを埋め込む）
         function showCardSaveModalWithQR(jsonString) {
             var container = document.getElementById('card-qr-container');
             var tooLongEl = document.getElementById('card-qr-too-long');
@@ -3894,7 +3961,7 @@
             tooLongEl.classList.add('hidden');
             downloadLink.classList.add('hidden');
             var strForQR = jsonString;
-            if (jsonString.length > 2500) {
+            if (jsonString.length > 1800) {
                 try {
                     var slim = JSON.parse(jsonString);
                     if (slim && slim.book) {
@@ -3904,11 +3971,13 @@
                     }
                 } catch (err) {}
             }
-            if (strForQR.length > 2500) {
+            var appUrlWithData = getAppBaseUrl() + '#import=' + base64urlEncode(strForQR);
+            var maxUrlLen = 2000;
+            if (appUrlWithData.length > maxUrlLen) {
                 tooLongEl.textContent = 'データが長いためQRコードにできません。JSONでダウンロードしてください。';
                 tooLongEl.classList.remove('hidden');
             } else {
-                var dataUrl = drawQRCode(container, strForQR, 256);
+                var dataUrl = drawQRCode(container, appUrlWithData, 256);
                 if (dataUrl) {
                     downloadLink.href = dataUrl;
                     downloadLink.download = '本の紹介-QR.png';
@@ -3921,16 +3990,17 @@
             showModal('card-save-modal');
         }
 
-        // エクスポートモーダル内のQRコードを更新（JSON文字列をQRコード化）
-        function updateExportModalQR(jsonString, ownerName) {
+        // エクスポートモーダル内のQRコードを更新（アプリURL＋データをQRコード化。読み取りでこのアプリに遷移してデータが反映される）
+        function updateExportModalQR(appUrlWithData, ownerName) {
             const container = document.getElementById('export-qr-container');
             const tooLongEl = document.getElementById('export-qr-too-long');
             const downloadLink = document.getElementById('export-qr-download');
             container.innerHTML = '';
             tooLongEl.classList.add('hidden');
             downloadLink.classList.add('hidden');
-            if (jsonString.length > 2500) {
-                tooLongEl.textContent = 'データが長いためQRコードにできません（約' + jsonString.length + '文字）。JSONでダウンロードしてください。';
+            var maxUrlLen = 2000;
+            if (appUrlWithData.length > maxUrlLen) {
+                tooLongEl.textContent = 'データが長いためQRコードにできません（約' + appUrlWithData.length + '文字）。JSONでダウンロードしてください。';
                 tooLongEl.classList.remove('hidden');
                 return;
             }
@@ -3940,7 +4010,7 @@
                 return;
             }
             try {
-                var dataUrl = drawQRCode(container, jsonString, 256);
+                var dataUrl = drawQRCode(container, appUrlWithData, 256);
                 if (dataUrl) {
                     downloadLink.href = dataUrl;
                     downloadLink.download = (ownerName || '読書記録') + '-QR.png';
@@ -3990,45 +4060,7 @@
             reader.onload = function(e) {
                 try {
                     const importedData = JSON.parse(e.target.result);
-                    
-                    // 新形式（メタデータ付き）のインポート
-                    if (importedData.metadata && Array.isArray(importedData.books)) {
-                        metadata = importedData.metadata;
-                        books = importedData.books;
-                        books.forEach(book => {
-                            if (!book.hasOwnProperty('reader')) book.reader = "";
-                            if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
-                            if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
-                            if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
-                        });
-                        saveMetadata();
-                        saveBooks();
-                        renderBooks(currentFilter);
-                        renderWantToReadSection();
-                        updateHeaderWithMetadata();
-                        showToast(`${metadata.owner}の読書記録をインポートしました`, 'success');
-                    } 
-                    // 旧形式（本のデータのみ）のインポート
-                    else if (Array.isArray(importedData)) {
-                        books = importedData;
-                        books.forEach(book => {
-                            if (!book.hasOwnProperty('reader')) book.reader = "";
-                            if (!['reading', 'completed', 'wantToRead'].includes(book.status)) book.status = 'reading';
-                            if (typeof book.fromIntroduction !== 'boolean') book.fromIntroduction = false;
-                            if (!book.hasOwnProperty('videoUrl')) book.videoUrl = '';
-                        });
-                        saveBooks();
-                        renderBooks(currentFilter);
-                        renderWantToReadSection();
-                        updateHeaderWithMetadata();
-                        showToast('データをインポートしました', 'success');
-                    }
-                    // 本のPOP形式のインポート（1冊分を「人からの紹介」として追加）
-                    else if ((importedData.type === 'book-pop' || importedData.type === 'introduction-card') && importedData.book) {
-                        addBookFromIntroductionCard(importedData);
-                    } else {
-                        throw new Error('Invalid data format');
-                    }
+                    if (!applyImportedData(importedData)) throw new Error('Invalid data format');
                 } catch (error) {
                     showToast('データの形式が正しくありません。有効なJSONファイルを選択してください。', 'error');
                 }
@@ -4144,6 +4176,21 @@
             // ローカルストレージからデータを読み込む
             loadBooks();
             renderBooks();
+
+            // URLの #import=... からデータを適用（QRで開いた場合など）
+            var hash = window.location.hash;
+            var importMatch = hash && hash.indexOf('#import=') === 0 && hash.slice(8);
+            var appliedFromUrl = false;
+            if (importMatch) {
+                try {
+                    var decoded = base64urlDecode(decodeURIComponent(importMatch));
+                    var importedData = JSON.parse(decoded);
+                    if (applyImportedData(importedData)) {
+                        appliedFromUrl = true;
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    }
+                } catch (err) {}
+            }
             
             // 初期状態では追加フォームを非表示
             document.getElementById('add-book-form-container').classList.remove('active');
@@ -4159,8 +4206,8 @@
                 document.getElementById('reader').value = metadata.owner;
             }
             
-            // 初回表示時にインポートモーダルを表示
-            showModal('import-modal');
+            // 初回表示時にインポートモーダルを表示（QRでデータを開いた場合は表示しない）
+            if (!appliedFromUrl) showModal('import-modal');
         });
     </script>
 </body>
