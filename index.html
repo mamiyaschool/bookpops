@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -655,7 +656,7 @@
 
             <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center cursor-pointer" id="toggle-want-to-read">
-                    <h2 class="text-xl font-semibold text-gray-800">読みたい！（<span id="want-to-read-count">0</span>）</h2>
+                    <h2 class="text-xl font-semibold text-gray-800">読みたい！（まだ読んでない・紹介データ）（<span id="want-to-read-count">0</span>）</h2>
                     <button type="button" class="text-gray-500 hover:text-gray-700 focus:outline-none" id="toggle-want-to-read-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -666,7 +667,7 @@
                     <div id="want-to-read-books" class="flex flex-wrap gap-4 mt-4">
                         <!-- 読みたい！の本はJavaScriptで動的に生成 -->
                     </div>
-                    <p class="mt-2 text-sm text-gray-500 hidden" id="want-to-read-empty">読みたい！の本はまだありません。</p>
+                    <p class="mt-2 text-sm text-gray-500 hidden" id="want-to-read-empty">読みたい！（まだ読んでない・紹介データ）の本はまだありません。</p>
                 </div>
             </div>
 
@@ -997,7 +998,7 @@
             <p class="text-gray-500 text-xs mb-2" id="book-detail-reader"></p>
             <div class="text-yellow-500 mb-2" id="book-detail-stars"></div>
             <span class="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-3" id="book-detail-status-badge">読書中</span>
-            <span class="from-introduction-badge hidden" id="book-detail-from-introduction">人からのPOP</span>
+            <span class="from-introduction-badge hidden" id="book-detail-from-introduction">人からの紹介</span>
             <p class="text-gray-600 text-sm mb-4 whitespace-pre-wrap" id="book-detail-review"></p>
             <div class="flex flex-wrap gap-2">
                 <button type="button" class="book-detail-edit-btn px-3 py-1.5 text-sm text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50" data-id="">編集</button>
@@ -1560,7 +1561,7 @@
             if (introBadge) {
                 if (book.fromIntroduction) {
                     introBadge.classList.remove('hidden');
-                    introBadge.textContent = '人からのPOP';
+                    introBadge.textContent = '人からの紹介';
                 } else {
                     introBadge.classList.add('hidden');
                 }
@@ -1862,7 +1863,7 @@
             if (emptyEl) {
                 if (wantToReadBooks.length === 0) {
                     emptyEl.classList.remove('hidden');
-                    emptyEl.textContent = '読みたい！の本はまだありません。';
+                    emptyEl.textContent = '読みたい！（まだ読んでない・紹介データ）の本はまだありません。';
                 } else {
                     emptyEl.classList.add('hidden');
                 }
@@ -2891,10 +2892,9 @@
             }
 
             function buildImportQrText() {
-                // QRが長すぎる場合に備えて段階的に短いデータへフォールバック
+                // 紹介用HTMLと同じ形式: このアプリのURL + #import= + データ（圧縮）。QR読み取りでブラウザが開き「人からの紹介」として追加される
                 var candidates = [
                     {
-                        // 読み取り優先: まず最小構成
                         type: 'book-pop',
                         book: {
                             title: safeTitle,
@@ -2917,17 +2917,25 @@
                             author: safeAuthor,
                             reader: reader || '',
                             rating: parseInt(rating, 10) || 0,
-                            // 文字数を絞って可読性を優先
                             review: (safeComment || '').slice(0, 80)
                         }
                     }
                 ];
+                var baseUrl = typeof getAppBaseUrl === 'function' ? getAppBaseUrl() : (window.location.href.split('#')[0]);
+                var maxUrlLen = 1400;
                 for (var i = 0; i < candidates.length; i++) {
                     try {
                         var s = JSON.stringify(candidates[i]);
-                        if (s.length <= 900) return s;
+                        var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(s) : s;
+                        var url = baseUrl + '#import=' + encoded;
+                        if (url.length <= maxUrlLen) return url;
                     } catch (err) {}
                 }
+                try {
+                    var s = JSON.stringify(candidates[0]);
+                    var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(s) : s;
+                    return baseUrl + '#import=' + encoded;
+                } catch (err) {}
                 return '';
             }
 
@@ -3838,7 +3846,7 @@
                 exportLink.download = `${ownerName}の読書記録-${getFileTimestamp()}.json`;
                 
                 // URLコピー用にデータ付きURLを保持
-                lastExportUrl = getAppBaseUrl() + '#import=' + base64urlEncode(data);
+                lastExportUrl = getAppBaseUrl() + '#import=' + encodeDataForUrl(data);
                 
                 // モーダルを表示
                 showModal('export-modal');
@@ -3853,7 +3861,21 @@
             }
         }
 
-        // URLに載せるためのBase64エンコード（UTF-8対応・URL安全）
+        // URLに載せるためのエンコード（圧縮して短くする。LZ-String使用）
+        function encodeDataForUrl(jsonStr) {
+            if (typeof LZString !== 'undefined' && LZString.compressToEncodedURIComponent) {
+                return LZString.compressToEncodedURIComponent(jsonStr);
+            }
+            return base64urlEncode(jsonStr);
+        }
+        function decodeDataFromUrl(encodedStr) {
+            if (typeof LZString !== 'undefined' && LZString.decompressFromEncodedURIComponent) {
+                var decoded = LZString.decompressFromEncodedURIComponent(encodedStr);
+                if (decoded) return decoded;
+            }
+            return base64urlDecode(encodedStr);
+        }
+        // 従来形式用（非圧縮Base64）
         function base64urlEncode(str) {
             var base64 = btoa(unescape(encodeURIComponent(str)));
             return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -3975,7 +3997,7 @@
                     }
                 } catch (err) {}
             }
-            var appUrlWithData = getAppBaseUrl() + '#import=' + base64urlEncode(strForQR);
+            var appUrlWithData = getAppBaseUrl() + '#import=' + encodeDataForUrl(strForQR);
             var maxUrlLen = 2000;
             if (appUrlWithData.length > maxUrlLen) {
                 tooLongEl.textContent = 'データが長いためQRコードにできません。JSONでダウンロードしてください。';
@@ -4162,8 +4184,8 @@
             var appliedFromUrl = false;
             if (importMatch) {
                 try {
-                    var decoded = base64urlDecode(decodeURIComponent(importMatch));
-                    var importedData = JSON.parse(decoded);
+                    var decoded = decodeDataFromUrl(decodeURIComponent(importMatch));
+                    var importedData = decoded ? JSON.parse(decoded) : null;
                     if (applyImportedData(importedData)) {
                         appliedFromUrl = true;
                         history.replaceState(null, '', window.location.pathname + window.location.search);
