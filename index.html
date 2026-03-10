@@ -897,10 +897,7 @@
                                 </div>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600 mb-2">生成後は「カードを生成（画像）」と「データ保存」の両方で利用できます。</p>
-                                <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                    カードを生成
-                                </button>
+                                <p class="text-sm text-gray-600 mb-2">タイトルやコメントを編集すると、右側にプレビューとデータ共有の内容が反映されます。</p>
                             </div>
                         </form>
                     </div>
@@ -911,7 +908,7 @@
                             <div id="card-preview-container" class="flex justify-center">
                                 <canvas id="card-canvas" width="1184" height="840" class="card-preview hidden"></canvas>
                                 <div id="preview-placeholder" class="w-full max-w-md h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                                    カードを生成するとここにプレビューが表示されます
+                                    「プレビュー」ボタンを押すとここに表示されます
                                 </div>
                                 <div id="comment-edit-controls" class="hidden">
                                     <div id="comment-selection-box"></div>
@@ -946,11 +943,21 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="download-container" class="hidden space-y-6">
+                        <div id="download-container" class="space-y-6">
                             <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                <h4 class="text-sm font-semibold text-gray-700 mb-2">データ保存</h4>
-                                <p class="text-sm text-gray-600 mb-3">本の紹介データをJSONで保存・共有できます。受け取った方は「データを読み込み」で読み込むと「人からの紹介」として追加されます。</p>
-                                <a id="download-card-json" href="#" class="inline-flex justify-center py-2 px-4 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">データを保存（JSON）</a>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">データ共有</h4>
+                                <p class="text-sm text-gray-600 mb-3">本の紹介データをJSONダウンロード・QRコード・URLリンクで共有できます。受け取った方は「データを読み込み」やQR読み取りで「人からの紹介」として追加されます。</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="card-share-url-btn" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        URLリンクをコピー
+                                    </button>
+                                    <button type="button" id="card-share-qr-btn" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        QRコードを表示
+                                    </button>
+                                    <a id="download-card-json" href="#" class="inline-flex justify-center px-3 py-2 border border-indigo-600 text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        JSONをダウンロード
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2792,10 +2799,10 @@
             document.getElementById('book-search-results').innerHTML = '';
         }
 
-        // カード生成フォームのイベントリスナー
+        // カード生成フォームのイベントリスナー（Enter送信でもプレビューを更新する）
         document.getElementById('card-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            handleCardPreview('final');
+            handleCardPreview('preview');
         });
 
         // プレビュー／本生成共通の処理
@@ -2892,48 +2899,47 @@
             }
 
             function buildImportQrText() {
-                // 紹介用HTMLと同じ形式: このアプリのURL + #import= + データ（圧縮）。QR読み取りでブラウザが開き「人からの紹介」として追加される
-                var candidates = [
-                    {
-                        type: 'book-pop',
-                        book: {
-                            title: safeTitle,
-                            author: safeAuthor
-                        }
-                    },
-                    {
-                        type: 'book-pop',
-                        book: {
-                            title: safeTitle,
-                            author: safeAuthor,
-                            reader: reader || '',
-                            rating: parseInt(rating, 10) || 0
-                        }
-                    },
-                    {
-                        type: 'book-pop',
-                        book: {
-                            title: safeTitle,
-                            author: safeAuthor,
-                            reader: reader || '',
-                            rating: parseInt(rating, 10) || 0,
-                            review: (safeComment || '').slice(0, 80)
-                        }
+                // データ保存時のQRと同じ内容（コメント・読んだ人・表紙など含む）。URL形式でQRに載せ、読み取りで「人からの紹介」として追加される
+                var coverImage = null;
+                var imageUrl = null;
+                if (currentBookForPop) {
+                    if (currentBookForPop.coverImage && currentBookForPop.coverImage.indexOf('data:') === 0) coverImage = currentBookForPop.coverImage;
+                    else if (currentBookForPop.coverImageUrl) imageUrl = currentBookForPop.coverImageUrl;
+                    else if (currentBookForPop.coverImage && currentBookForPop.coverImage.indexOf('http') === 0) imageUrl = currentBookForPop.coverImage;
+                }
+                var payload = {
+                    type: 'book-pop',
+                    book: {
+                        title: safeTitle,
+                        author: safeAuthor,
+                        reader: reader || '',
+                        review: safeComment || '',
+                        rating: parseInt(rating, 10) || 0,
+                        coverImage: coverImage,
+                        imageUrl: imageUrl || undefined
                     }
-                ];
-                var baseUrl = typeof getAppBaseUrl === 'function' ? getAppBaseUrl() : (window.location.href.split('#')[0]);
-                var maxUrlLen = 1400;
-                for (var i = 0; i < candidates.length; i++) {
+                };
+                var jsonStr = JSON.stringify(payload, null, 2);
+                if (jsonStr.length > 1800) {
                     try {
-                        var s = JSON.stringify(candidates[i]);
-                        var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(s) : s;
-                        var url = baseUrl + '#import=' + encoded;
-                        if (url.length <= maxUrlLen) return url;
+                        var slim = { type: payload.type, book: {} };
+                        for (var k in payload.book) if (payload.book.hasOwnProperty(k) && k !== 'coverImage' && k !== 'imageUrl') slim.book[k] = payload.book[k];
+                        jsonStr = JSON.stringify(slim, null, 2);
                     } catch (err) {}
                 }
+                var baseUrl = typeof getAppBaseUrl === 'function' ? getAppBaseUrl() : (window.location.href.split('#')[0]);
+                var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(jsonStr) : jsonStr;
+                var url = baseUrl + '#import=' + encoded;
+                var maxUrlLen = 2000;
+                if (url.length <= maxUrlLen) return url;
                 try {
-                    var s = JSON.stringify(candidates[0]);
-                    var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(s) : s;
+                    var fallback = { type: 'book-pop', book: { title: safeTitle, author: safeAuthor, reader: reader || '', review: (safeComment || '').slice(0, 120), rating: parseInt(rating, 10) || 0 } };
+                    encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(JSON.stringify(fallback, null, 2)) : JSON.stringify(fallback);
+                    url = baseUrl + '#import=' + encoded;
+                    if (url.length <= maxUrlLen) return url;
+                } catch (err) {}
+                try {
+                    encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(JSON.stringify({ type: 'book-pop', book: { title: safeTitle, author: safeAuthor } })) : '';
                     return baseUrl + '#import=' + encoded;
                 } catch (err) {}
                 return '';
@@ -3141,7 +3147,6 @@
                 updateCommentEditControls();
 
                 if (isPreviewOnly) {
-                    document.getElementById('download-container').classList.add('hidden');
                     var previewDataUrl = canvas.toDataURL('image/jpeg', 0.9);
                     var previewDownloadLink = document.getElementById('download-link');
                     var printBtn = document.getElementById('card-print-btn');
@@ -3152,7 +3157,6 @@
                     if (printBtn) printBtn.classList.remove('hidden');
                     if (!isSilent) showToast('プレビューを表示しました', 'success');
                 } else {
-                    document.getElementById('download-container').classList.remove('hidden');
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                     var downloadLink = document.getElementById('download-link');
                     var printBtnFinal = document.getElementById('card-print-btn');
@@ -3462,8 +3466,7 @@
             if (toggleBtn) toggleBtn.textContent = 'プレビュー';
         });
 
-        document.getElementById('download-card-json').addEventListener('click', function(e) {
-            e.preventDefault();
+        function buildCardSharePayload() {
             var coverImage = null;
             var imageUrl = null;
             if (currentBookForPop) {
@@ -3471,7 +3474,7 @@
                 else if (currentBookForPop.coverImageUrl) imageUrl = currentBookForPop.coverImageUrl;
                 else if (currentBookForPop.coverImage && currentBookForPop.coverImage.indexOf('http') === 0) imageUrl = currentBookForPop.coverImage;
             }
-            var payload = {
+            return {
                 type: 'book-pop',
                 book: {
                     title: document.getElementById('card-title').value.trim().replace(/\s+/g, ' '),
@@ -3483,12 +3486,60 @@
                     imageUrl: imageUrl || undefined
                 }
             };
+        }
+
+        document.getElementById('download-card-json').addEventListener('click', function(e) {
+            e.preventDefault();
+            var payload = buildCardSharePayload();
             var jsonStr = JSON.stringify(payload, null, 2);
             var blob = new Blob([jsonStr], { type: 'application/json' });
             var url = URL.createObjectURL(blob);
             document.getElementById('card-json-download').href = url;
             document.getElementById('card-json-download').download = '本の紹介-' + getFileTimestamp() + '.json';
             showCardSaveModalWithQR(jsonStr);
+        });
+
+        document.getElementById('card-share-qr-btn').addEventListener('click', function() {
+            var payload = buildCardSharePayload();
+            var jsonStr = JSON.stringify(payload, null, 2);
+            showCardSaveModalWithQR(jsonStr);
+        });
+
+        document.getElementById('card-share-url-btn').addEventListener('click', function() {
+            var payload = buildCardSharePayload();
+            var jsonStr = JSON.stringify(payload, null, 2);
+            var strForQR = jsonStr;
+            if (jsonStr.length > 1800) {
+                try {
+                    var slim = JSON.parse(jsonStr);
+                    if (slim && slim.book) {
+                        delete slim.book.coverImage;
+                        delete slim.book.imageUrl;
+                        strForQR = JSON.stringify(slim, null, 2);
+                    }
+                } catch (err) {}
+            }
+            try {
+                var baseUrl = typeof getAppBaseUrl === 'function' ? getAppBaseUrl() : (window.location.href.split('#')[0]);
+                var encoded = typeof encodeDataForUrl === 'function' ? encodeDataForUrl(strForQR) : strForQR;
+                var shareUrl = baseUrl + '#import=' + encoded;
+                var maxUrlLen = 2000;
+                if (shareUrl.length > maxUrlLen) {
+                    showToast('URLが長すぎてコピーできません。JSONまたはQRコードで共有してください。', 'error');
+                    return;
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(shareUrl).then(function() {
+                        showToast('共有用URLをコピーしました。', 'success');
+                    }).catch(function() {
+                        window.prompt('このURLをコピーしてください。', shareUrl);
+                    });
+                } else {
+                    window.prompt('このURLをコピーしてください。', shareUrl);
+                }
+            } catch (err) {
+                showToast('URLの作成に失敗しました。', 'error');
+            }
         });
 
         document.getElementById('card-save-modal-close').addEventListener('click', function() {
